@@ -1,0 +1,14 @@
+{
+    // What the editor and eslint's type-aware rules see: every source file,
+    // specs included. Not a build or typecheck target (those are
+    // tsconfig.app.json, tsconfig.spec.json and e2e/tsconfig.json).
+    "extends": "../../tsconfig.angular.json",
+    "compilerOptions": {
+        "types": ["vitest/globals", "node"],
+        "lib": ["es2023", "dom", "dom.iterable"],
+        "baseUrl": "../../",
+        "moduleResolution": "bundler",
+        "noEmit": true
+    },
+    "include": ["src/**/*.ts"]
+}

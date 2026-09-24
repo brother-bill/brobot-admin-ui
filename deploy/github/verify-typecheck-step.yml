@@ -1,0 +1,12 @@
+# NOT a workflow. The step to add to singularity's .github/workflows/verify.yml,
+# right after "Typecheck brobot-client", now that apps/brobot-admin-ui is a
+# workspace member (ticket U1). Fleet agents cannot edit .github/workflows/**,
+# so the operator pastes it in. Three projects: tsconfig.app.json is the site
+# (it excludes the specs), tsconfig.spec.json compiles the unit specs, and
+# e2e/tsconfig.json the Playwright smoke spec, which nothing else compiles.
+
+            - name: Typecheck brobot-admin-ui
+              run: |
+                  pnpm exec tsc --noEmit -p apps/brobot-admin-ui/tsconfig.app.json
+                  pnpm exec tsc --noEmit -p apps/brobot-admin-ui/tsconfig.spec.json
+                  pnpm exec tsc --noEmit -p apps/brobot-admin-ui/e2e/tsconfig.json

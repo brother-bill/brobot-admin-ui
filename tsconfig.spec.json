@@ -1,10 +1,11 @@
-/* To learn more about this file see: https://angular.io/config/tsconfig. */
 {
-  "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "outDir": "./out-tsc/spec",
-    "types": ["jasmine"]
-  },
-  "files": ["src/test.ts", "src/polyfills.ts"],
-  "include": ["src/**/*.spec.ts", "src/**/*.d.ts"]
+    "extends": "../../tsconfig.angular.json",
+    "compilerOptions": {
+        "outDir": "../../dist/out-tsc",
+        "moduleResolution": "bundler",
+        "types": ["vitest/globals", "node"],
+        "lib": ["es2023", "dom", "dom.iterable"],
+        "baseUrl": "../../"
+    },
+    "include": ["src/**/*.spec.ts", "src/**/*.d.ts"]
 }

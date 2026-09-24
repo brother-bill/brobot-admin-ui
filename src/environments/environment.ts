@@ -1,19 +1,17 @@
-// This file can be replaced during build by using the `fileReplacements` array.
-// `ng build` replaces `environment.ts` with `environment.prod.ts`.
-// The list of file replacements can be found in `angular.json`.
-
-export const environment = {
-  production: false,
-  apiUrl: 'http://localhost:3000',
-  siteUrl: 'http://localhost:4200',
-  wsUrl: 'ws://172.25.254.184:3000/api/admin-ui',
-};
-
-/*
- * For easier debugging in development mode, you can import the following file
- * to ignore zone related error stack frames such as `zone.run`, `zoneDelegate.invokeTask`.
- *
- * This import should be commented out in production mode because it will have a negative impact
- * on performance if an error is thrown.
+/**
+ * Local development: brobot's API on :3000 (`pnpm --filter @singularity/brobot run dev`),
+ * this site on :4207. Add `http://localhost:4207` to the API's `ALLOWED_ORIGINS`
+ * and point its `UI_URL` here so the Twitch callbacks land back on this site.
  */
-// import 'zone.js/plugins/zone-error';  // Included with Angular CLI.
+export const environment = {
+    production: false,
+    /** brobot's API origin. Every HTTP route lives under `${apiUrl}/api`. */
+    apiUrl: 'http://localhost:3000',
+    /** The stream overlay's receive-only socket (`/api/admin-ui`). */
+    overlaySocketUrl: 'ws://localhost:3000/api/admin-ui',
+    /** Pokémon card art, `${base}/<default|shiny|female|shiny_female>/<dexNum>` (the 2022 set). */
+    pokemonArtUrl: 'https://res.cloudinary.com/dsmddewxs/image/upload/v1668805125/pokemon/960x960',
+    /** Pokémon cries for the overlay's roar, `${base}/<nameId>.mp3` (the 2022 set). */
+    pokemonCryUrl:
+        'https://res.cloudinary.com/dsmddewxs/video/upload/v1669433072/stream-overlay/pokemon-sounds',
+};

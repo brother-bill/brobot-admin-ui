@@ -1,0 +1,13 @@
+/**
+ * brobot-admin-ui theme — ngx-ui's material look, dark by default, on
+ * brobot's palette (the same one apps/brobot-client uses).
+ *
+ * The palette is generated from `brand.config.json`. Regenerate with:
+ *   pnpm --filter @singularity/brobot-admin-ui run gen:theme
+ */
+
+@use '@singularity/ngx-ui/styles/themes/material' as theme;
+@use '@singularity/ngx-ui/styles' as ui;
+@use './generated-colors' as brand;
+
+@include theme.look($brand: brand.$brand);
