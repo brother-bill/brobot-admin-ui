@@ -1,10 +1,22 @@
-/* To learn more about this file see: https://angular.io/config/tsconfig. */
 {
-  "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "outDir": "./out-tsc/app",
-    "types": []
-  },
-  "files": ["src/main.ts", "src/polyfills.ts"],
-  "include": ["src/**/*.d.ts"]
+    "extends": "../../tsconfig.angular.json",
+    "compilerOptions": {
+        "outDir": "../../dist/out-tsc",
+        "types": [],
+        "lib": ["es2023", "dom", "dom.iterable"],
+        "baseUrl": "../../",
+        "moduleResolution": "bundler"
+    },
+    "angularCompilerOptions": {
+        // NG8113 (unused standalone imports) is only a build warning by default,
+        // and neither eslint nor tsc sees it. Promote it so orphans fail.
+        "extendedDiagnostics": {
+            "checks": {
+                "unusedStandaloneImports": "error"
+            }
+        }
+    },
+    "files": ["src/main.ts"],
+    "include": ["src/**/*.d.ts"],
+    "exclude": ["src/**/*.spec.ts"]
 }
