@@ -45,6 +45,16 @@ describe('StreamOverlayComponent', () => {
         return { fixture, root: fixture.nativeElement as HTMLElement };
     }
 
+    it('makes the whole page transparent for OBS, and gives it back', () => {
+        document.documentElement.style.background = 'rgb(1, 2, 3)';
+        const { fixture } = render();
+        expect(document.documentElement.style.background).toBe('transparent');
+        expect(document.body.style.background).toBe('transparent');
+        fixture.destroy();
+        expect(document.documentElement.style.background).toBe('rgb(1, 2, 3)');
+        document.documentElement.style.background = '';
+    });
+
     it('plays the duck', () => {
         render();
         socket.frames.next({ type: 'quack' });

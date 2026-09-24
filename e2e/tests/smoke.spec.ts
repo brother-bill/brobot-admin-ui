@@ -85,6 +85,8 @@ test('the callback notice is shown and taken off the URL', async ({ page }) => {
 test('the overlay page is transparent and has no site chrome', async ({ page }) => {
     await page.goto('/twitch/supahot/overlay');
     await expect(page.getByRole('navigation', { name: 'Main' })).toHaveCount(0);
-    const background = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
-    expect(background).toBe('rgba(0, 0, 0, 0)');
+    const backgrounds = await page.evaluate(() =>
+        [document.documentElement, document.body].map(el => getComputedStyle(el).backgroundColor),
+    );
+    expect(backgrounds).toEqual(['rgba(0, 0, 0, 0)', 'rgba(0, 0, 0, 0)']);
 });

@@ -1,3 +1,4 @@
+import { DOCUMENT } from '@angular/common';
 import {
     ChangeDetectionStrategy,
     Component,
@@ -177,6 +178,7 @@ export class StreamOverlayComponent {
     protected readonly socket = inject(OVERLAY_SOCKET);
     private readonly sound = inject(OverlaySound);
     private readonly destroyRef = inject(DestroyRef);
+    private readonly document = inject(DOCUMENT);
 
     private readonly votes = signal<Partial<Record<VoteKind, VoteStateEvent>>>({});
     protected readonly roar = signal<Roar | null>(null);
@@ -198,11 +200,28 @@ export class StreamOverlayComponent {
     );
 
     constructor() {
+        this.clearPageBackground();
         this.socket.frames$
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe(frame => this.onFrame(frame));
         this.destroyRef.onDestroy(() => {
             if (this.roarTimer) clearTimeout(this.roarTimer);
+        });
+    }
+
+    /**
+     * OBS composites the page over the stream, so the page itself must be
+     * transparent — but the theme paints `html.look-material` with
+     * `--ui-surface`. Inline styles beat any stylesheet (and need no `:has()`,
+     * which OBS's embedded Chromium may predate); they are put back if the
+     * overlay is ever left for another route.
+     */
+    private clearPageBackground(): void {
+        const targets = [this.document.documentElement, this.document.body];
+        const previous = targets.map(el => el.style.background);
+        for (const el of targets) el.style.background = 'transparent';
+        this.destroyRef.onDestroy(() => {
+            targets.forEach((el, i) => (el.style.background = previous[i] ?? ''));
         });
     }
 
