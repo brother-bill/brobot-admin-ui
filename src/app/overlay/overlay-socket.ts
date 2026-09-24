@@ -1,7 +1,7 @@
 import type { Signal } from '@angular/core';
 import { InjectionToken, signal } from '@angular/core';
 import type { Observable } from 'rxjs';
-import { filter, map, retry, share, timer } from 'rxjs';
+import { filter, map, repeat, retry, share, timer } from 'rxjs';
 import { webSocket } from 'rxjs/webSocket';
 import type { OverlayEvent } from './overlay-events';
 import type { VoteStateEvent } from './vote-state';
@@ -36,16 +36,22 @@ export class WebSocketOverlaySocket implements OverlaySocket {
     readonly status = this._status.asReadonly();
     readonly frames$: Observable<OverlayFrame>;
 
-    constructor(url: string) {
+    /** `WebSocketCtor` is for tests; the browser's WebSocket otherwise. */
+    constructor(url: string, WebSocketCtor?: new (url: string) => WebSocket) {
         const subject = webSocket<unknown>({
             url,
+            ...(WebSocketCtor ? { WebSocketCtor: WebSocketCtor as typeof WebSocket } : {}),
             // Parse leniently: one bad frame must not tear the socket down.
             deserializer: event => safeJson(event.data),
             openObserver: { next: () => this._status.set('open') },
             closeObserver: { next: () => this._status.set('reconnecting') },
         });
         this.frames$ = subject.pipe(
+            // An error (refused, dropped) and a clean close (the server or a
+            // proxy restarting) both mean "connect again": the socket completes
+            // on a clean close, which `retry` alone would take as the end.
             retry({ delay: () => timer(RECONNECT_DELAY_MS) }),
+            repeat({ delay: () => timer(RECONNECT_DELAY_MS) }),
             map(parseOverlayFrame),
             filter((frame): frame is OverlayFrame => frame !== null),
             share(),

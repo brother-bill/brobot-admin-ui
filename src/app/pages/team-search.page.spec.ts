@@ -124,6 +124,26 @@ describe('TeamSearchPage', () => {
         http.expectNone(() => true);
     });
 
+    it('says what is missing when the box is submitted empty', async () => {
+        await harness.navigateByUrl('/pokemon/team', TeamSearchPage);
+        let root = await settled();
+        root.querySelector('form')!.dispatchEvent(new Event('submit'));
+        root = await settled();
+        const input = root.querySelector<HTMLInputElement>('input')!;
+        expect(input.getAttribute('aria-invalid')).toBe('true');
+        expect(text(root)).toContain('Enter a Twitch username.');
+        http.expectNone(() => true);
+    });
+
+    it('does not repeat a failed search in the polite region; the alert says it', async () => {
+        await harness.navigateByUrl('/pokemon/team?username=busy', TeamSearchPage);
+        TestBed.tick();
+        http.expectOne(`${API}/pokemon/teams?login=busy`).flush(null, { status: 502, statusText: 'Bad Gateway' });
+        const root = await settled();
+        expect(root.querySelector('[aria-live="polite"]')?.textContent).toBe('');
+        expect(text(root)).toContain("Twitch didn't answer.");
+    });
+
     it('puts a new search in the URL, so it can be shared', async () => {
         await harness.navigateByUrl('/pokemon/team', TeamSearchPage);
         const root = await settled();

@@ -302,15 +302,10 @@ export class TeamSearchPage {
         return error instanceof HttpErrorResponse && error.status === 404;
     });
 
+    /** Found teams only: a failed search is announced by its alert banner. */
     protected readonly announcement = computed(() => {
-        const login = this.login();
-        if (!login) return '';
-        if (this.team.hasValue()) {
-            const count = this.memberCount();
-            return `${this.team.value().displayName}'s team: ${count} Pokémon.`;
-        }
-        if (this.team.error()) return this.searchError(login);
-        return '';
+        if (!this.login() || !this.team.hasValue()) return '';
+        return `${this.team.value().displayName}'s team: ${this.memberCount()} Pokémon.`;
     });
 
     constructor() {
@@ -333,6 +328,9 @@ export class TeamSearchPage {
         control.setValue(control.value.trim());
         if (control.invalid) {
             control.markAsTouched();
+            // A status emission is what lib-input re-reads its error state on;
+            // an untouched empty field would otherwise submit silently.
+            control.updateValueAndValidity();
             this.loginInput().nativeElement.focus();
             return;
         }

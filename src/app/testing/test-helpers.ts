@@ -11,6 +11,7 @@ import { AUTH_CONFIG, authInterceptor } from '@singularity/ngx-auth';
 import { provideLibUi } from '@singularity/ngx-ui';
 import type { SessionUser } from '../core/brobot-api';
 import { isAdmin, provideBrobotApi } from '../core/brobot-api';
+import { provideUiStrings } from '../core/ui-strings';
 import type { SessionState } from '../core/session.service';
 import { SessionService } from '../core/session.service';
 
@@ -28,6 +29,7 @@ export function appTestProviders(routes: Routes = []): (Provider | EnvironmentPr
         { provide: AUTH_CONFIG, useValue: { apiBaseUrl: API, tokenMode: 'cookie' } },
         provideBrobotApi(API_ORIGIN),
         provideLibUi(),
+        provideUiStrings(),
     ];
 }
 
@@ -56,11 +58,19 @@ export function text(root: HTMLElement): string {
 /** A settled session for page tests, without the status round trip. */
 export function provideFakeSession(signedInAs: SessionUser | null): Provider {
     const current = signal(signedInAs);
-    const fake: Pick<SessionService, 'user' | 'state' | 'isAdmin' | 'rememberReturnUrl'> = {
+    const fake: Pick<SessionService, 'user' | 'state' | 'isAdmin' | 'rememberReturnUrl' | 'restore'> & {
+        restores: number;
+    } = {
         user: current.asReadonly(),
         state: computed<SessionState>(() => (current() ? 'signed-in' : 'signed-out')),
         isAdmin: computed(() => isAdmin(current())),
         rememberReturnUrl: () => undefined,
+        restores: 0,
+        restore() {
+            fake.restores++;
+            current.set(null);
+            return Promise.resolve();
+        },
     };
     return { provide: SessionService, useValue: fake };
 }

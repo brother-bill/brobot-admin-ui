@@ -9,6 +9,7 @@ import { provideLibUi } from '@singularity/ngx-ui';
 import { environment } from '../environments/environment';
 import { routes } from './app.routes';
 import { provideBrobotApi } from './core/brobot-api';
+import { provideUiStrings } from './core/ui-strings';
 
 /**
  * brobot issues the same JWT pair shape api-time does, in the same cookies,
@@ -34,5 +35,6 @@ export const appConfig: ApplicationConfig = {
         { provide: AUTH_CONFIG, useValue: authConfig },
         provideBrobotApi(environment.apiUrl),
         provideLibUi({ button: { defaultVariant: 'primary' } }),
+        provideUiStrings(),
     ],
 };

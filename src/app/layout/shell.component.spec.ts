@@ -91,6 +91,22 @@ describe('ShellComponent', () => {
         const root = await answerStatus(401);
         expect(text(root)).toContain("That Twitch account can't be linked here.");
         expect(TestBed.inject(Router).url).toBe('/commands');
+        const dismiss = [...root.querySelectorAll('button')].find(b => b.getAttribute('aria-label') === 'Dismiss alert');
+        expect(dismiss).toBeDefined();
+        // Clearing the parameters is not a new page: focus is left alone.
+        expect(document.activeElement?.tagName).not.toBe('H1');
+    });
+
+    it('moves focus to the new page heading on a path change only', async () => {
+        await harness.navigateByUrl('/commands');
+        await answerStatus(401);
+        await harness.navigateByUrl('/pokemon/leaderboard');
+        await tick();
+        expect(document.activeElement?.textContent).toBe('Test page');
+        (document.activeElement as HTMLElement).blur();
+        await harness.navigateByUrl('/pokemon/leaderboard?sort=level');
+        await tick();
+        expect(document.activeElement).toBe(document.body);
     });
 
     it('returns a viewer to the page they signed in from', async () => {

@@ -1,4 +1,4 @@
-import { httpResource } from '@angular/common/http';
+import { HttpErrorResponse, httpResource } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import {
@@ -114,7 +114,6 @@ interface CommandGroup {
                                                 @if (session.isAdmin()) {
                                                     <lib-slide-toggle
                                                         [checked]="command.enabled"
-                                                        [disabled]="saving().has(command.name)"
                                                         (change)="setEnabled(command, $event)">
                                                         {{ command.enabled ? 'On' : 'Off' }}
                                                         <span class="sr-only">: {{ command.trigger }}</span>
@@ -173,8 +172,13 @@ export class CommandsPage {
 
     protected readonly commands = httpResource<BotCommand[]>(() => this.api.url('commands'));
 
-    /** Commands with a save in flight. */
-    protected readonly saving = signal<ReadonlySet<string>>(new Set());
+    /**
+     * The latest save per command. A switch stays operable while a save is in
+     * flight (disabling it would drop keyboard focus); only the latest
+     * answer for a command is applied.
+     */
+    private readonly latestSave = new Map<string, number>();
+    private saveCounter = 0;
     protected readonly saveError = signal<string | null>(null);
     protected readonly announcement = signal('');
 
@@ -198,24 +202,24 @@ export class CommandsPage {
      */
     protected async setEnabled(command: BotCommand, enabled: boolean | Event): Promise<void> {
         if (typeof enabled !== 'boolean') return;
+        const save = ++this.saveCounter;
+        this.latestSave.set(command.name, save);
         this.saveError.set(null);
-        this.saving.update(set => new Set(set).add(command.name));
         this.patch(command.name, enabled);
         try {
             const saved = await firstValueFrom(this.api.setCommandEnabled(command.name, enabled));
+            if (this.latestSave.get(command.name) !== save) return;
             this.patch(saved.name, saved.enabled);
             this.announcement.set(`${saved.trigger} is now ${saved.enabled ? 'on' : 'off'}.`);
         } catch (error) {
+            if (this.latestSave.get(command.name) !== save) return;
             this.patch(command.name, !enabled);
             this.saveError.set(
                 `Could not turn ${command.trigger} ${enabled ? 'on' : 'off'}. ${describeHttpError(error)}`,
             );
-        } finally {
-            this.saving.update(set => {
-                const next = new Set(set);
-                next.delete(command.name);
-                return next;
-            });
+            // The session ended under us (the interceptor's refresh failed too):
+            // re-read it, so the header and these switches stop claiming otherwise.
+            if (error instanceof HttpErrorResponse && error.status === 401) void this.session.restore();
         }
     }
 

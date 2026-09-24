@@ -61,11 +61,20 @@ redirect to `/`.
 - **Streamer / bot links** are admin-only buttons on `/login`. They never
   change who is signed in here.
 
+## Strings from ngx-ui
+
+ngx-ui labels a few controls with translation keys. For example, the alert
+banner's dismiss button is `a11y.dismiss_alert`. The site is English-only, so
+`core/ui-strings.ts` gives ngx-translate a small inline English table. Without
+it, a screen reader would read the key itself. Add a key there when a new
+ngx-ui component shows one.
+
 ## The stream overlay
 
-OBS loads `/twitch/supahot/overlay` as a browser source. It listens on
-`/api/admin-ui`, a receive-only socket with no secret. It reconnects every
-3 s and shows:
+OBS loads `/twitch/supahot/overlay` as a browser source. The page makes
+`<html>` and `<body>` transparent itself, because the theme paints them. It
+listens on `/api/admin-ui`, a receive-only socket with no secret. It
+reconnects 3 s after any close, clean or not, and shows:
 
 - `pokemon_roar`: the viewer's Pokémon and its name, with its cry. Roars
   queue and never overlap.

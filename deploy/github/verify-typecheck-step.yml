@@ -1,6 +1,8 @@
 # NOT a workflow. The step to add to singularity's .github/workflows/verify.yml,
-# right after "Typecheck brobot-client", now that apps/brobot-admin-ui is a
-# workspace member (ticket U1). Fleet agents cannot edit .github/workflows/**,
+# right after "Typecheck mediabot" (after brobot-client's step, if that one -
+# apps/brobot-client/deploy/github/verify-typecheck-step.yml, ticket C1 - has
+# been pasted by then; as of 2026-09-24 it had not), now that
+# apps/brobot-admin-ui is a workspace member (ticket U1). Fleet agents cannot edit .github/workflows/**,
 # so the operator pastes it in. Three projects: tsconfig.app.json is the site
 # (it excludes the specs), tsconfig.spec.json compiles the unit specs, and
 # e2e/tsconfig.json the Playwright smoke spec, which nothing else compiles.

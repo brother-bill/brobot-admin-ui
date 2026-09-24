@@ -16,6 +16,8 @@ Definition of Done, WCAG 2.2 AA, and no Playwright in fleet jobs.
 - **`lib-slide-toggle`'s `(change)` fires twice**: its boolean output, then
   the inner checkbox's native `change` event bubbling to the host. Handlers
   must ignore the non-boolean call (see `CommandsPage.setEnabled`).
+- **ngx-ui translation keys need English** in `src/app/core/ui-strings.ts`.
+  Otherwise the raw key becomes an accessible name.
 - **Typecheck all three projects**: `tsconfig.app.json`, `tsconfig.spec.json`
   and `e2e/tsconfig.json`. `tsconfig.editor.json` exists only so eslint's
   type-aware rules can see every file.

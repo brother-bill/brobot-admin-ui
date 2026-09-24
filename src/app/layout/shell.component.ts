@@ -51,7 +51,7 @@ import { SiteHeaderComponent } from './site-header.component';
         }
     `,
     template: `
-        <lib-skip-link [links]="skipLinks" navLabel="Skip links" />
+        <lib-skip-link [links]="skipLinks" />
         <app-site-header />
 
         @if (notice(); as n) {
@@ -85,16 +85,19 @@ export class ShellComponent {
     ];
 
     constructor() {
-        let firstNavigation = true;
+        let previousPath: string | null = null;
         this.router.events
             .pipe(
                 filter((event): event is NavigationEnd => event instanceof NavigationEnd),
                 takeUntilDestroyed(inject(DestroyRef)),
             )
-            .subscribe(() => {
+            .subscribe(event => {
                 this.consumeAuthReturn();
-                if (!firstNavigation) this.focusPageHeading();
-                firstNavigation = false;
+                // A new page, not a new query string: a team search or the
+                // notice's cleanup must leave focus where it is.
+                const path = event.urlAfterRedirects.split(/[?#]/)[0] ?? '';
+                if (previousPath !== null && path !== previousPath) this.focusPageHeading();
+                previousPath = path;
             });
         void this.restoreSession();
     }
