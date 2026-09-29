@@ -28,7 +28,7 @@ export function isAdmin(user: SessionUser | null): boolean {
     return user?.roles.some(role => ADMIN_ROLES.includes(role)) ?? false;
 }
 
-/** One row of `GET /api/pokemon/leaderboard` (top 30 by level). */
+/** One row of `GET /api/pokemon/leaderboard` (top 100 by level). */
 export interface LeaderboardEntry {
     level: number;
     name: string;
