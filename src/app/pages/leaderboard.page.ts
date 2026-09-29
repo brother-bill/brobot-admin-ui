@@ -17,7 +17,7 @@ interface LeaderboardRow extends LeaderboardEntry {
     teamLogin: string | null;
 }
 
-/** The 30 highest-level Pokémon, from `GET /api/pokemon/leaderboard`. Public. */
+/** The 100 highest-level Pokémon, from `GET /api/pokemon/leaderboard`. Public. */
 @Component({
     selector: 'app-leaderboard-page',
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -39,7 +39,7 @@ interface LeaderboardRow extends LeaderboardEntry {
     template: `
         <div class="page">
             <h1 class="page__title">Pokémon leaderboard</h1>
-            <p class="page__lede">The 30 highest-level Pokémon in the streamer's chat.</p>
+            <p class="page__lede">The 100 highest-level Pokémon in the streamer's chat.</p>
 
             @if (leaderboard.hasValue()) {
                 @if (rows().length === 0) {
@@ -47,7 +47,7 @@ interface LeaderboardRow extends LeaderboardEntry {
                 } @else {
                     <div class="table-scroll">
                         <table class="data-table">
-                            <caption class="sr-only">Top 30 Pokémon by level</caption>
+                            <caption class="sr-only">Top 100 Pokémon by level</caption>
                             <thead>
                                 <tr>
                                     <th scope="col" class="num">Rank</th>
