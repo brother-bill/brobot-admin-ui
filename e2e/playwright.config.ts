@@ -1,9 +1,13 @@
 import { defineConfig, devices } from '@playwright/test';
+import { refuseE2eInFleetAgentJob } from '../../../config/fleet-e2e-guard.mjs';
+
+// Fleet agent jobs leave e2e to CI; see the guard's header.
+refuseE2eInFleetAgentJob();
 
 /**
  * Smoke tests for brobot-admin-ui. They need no API: every call to brobot is
- * answered by `page.route` in the spec. Not run by fleet jobs; CI runs them
- * at deploy time like every other app's e2e.
+ * answered by `page.route` in the spec. Not run by fleet jobs (the guard above
+ * refuses them); CI runs them at deploy time like every other app's e2e.
  *
  *   pnpm --filter @singularity/brobot-admin-ui run test:e2e
  */
