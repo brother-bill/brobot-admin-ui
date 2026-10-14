@@ -63,7 +63,7 @@ test('a signed-out viewer can read the commands and the leaderboard', async ({ p
 
     await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Leaderboard' }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Pokémon leaderboard' })).toBeFocused();
-    await expect(page.getByRole('cell', { name: 'viewer_one' })).toBeVisible();
+    await expect(page.getByRole('cell', { name: 'viewer_one', exact: true })).toBeVisible();
 });
 
 test('an admin can switch a command off', async ({ page }) => {
@@ -84,6 +84,7 @@ test('the callback notice is shown and taken off the URL', async ({ page }) => {
 
 test('the overlay page is transparent and has no site chrome', async ({ page }) => {
     await page.goto('/twitch/supahot/overlay');
+    await expect(page.locator('app-stream-overlay')).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Main' })).toHaveCount(0);
     const backgrounds = await page.evaluate(() =>
         [document.documentElement, document.body].map(el => getComputedStyle(el).backgroundColor),
