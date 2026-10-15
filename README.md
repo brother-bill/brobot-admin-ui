@@ -44,13 +44,13 @@ That refresh goes through the generated contracts client, whose base path is
 set to brobot's `/api`, so it lands on brobot's `POST /api/auth/refresh`
 alias (see `app.config.ts`).
 
-ngx-auth's `AuthService` and guards are **not** used. They read api-time's
-`/api/auth/current-user`, and nothing on this site needs a guard: every page
-is public, and admin controls are hidden rather than routed away from.
-`SessionService` asks brobot's `GET /api/auth/twitch/status` instead. It
-asks through an `HttpBackend` client, so a signed-out viewer's 401 means
-"signed out". Otherwise the interceptor would treat it as an error and
-redirect to `/`.
+The site does not use ngx-auth's current-user lookup or route guards:
+that lookup reads api-time's `/api/auth/current-user`, and every page here
+is public, with admin controls hidden rather than routed away from.
+`SessionService` asks brobot's `GET /api/auth/twitch/status` through an
+`HttpBackend` client and manages its own session state. A refused refresh
+means "signed out". For other requests, the shared interceptor expires its
+session and propagates a refresh 401 without navigating.
 
 - **Sign in** is a full-page link to `/api/auth/twitch/login`. Before
   leaving, the site stores the current path. The API's callback lands on `/`,

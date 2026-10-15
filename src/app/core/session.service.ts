@@ -15,11 +15,11 @@ const RETURN_URL_KEY = 'brobot.authReturnUrl';
  * learn who we are is to ask `GET /api/auth/twitch/status`. Most of this site
  * is public, so "signed out" is a normal answer, not a failure: this service
  * talks to the auth endpoints through an `HttpBackend` client, around
- * libs/ngx-auth's interceptor. That interceptor answers any 401 with a refresh
- * and, when the refresh fails too, a redirect to `/` — right for an admin
- * action whose session expired, wrong for a viewer who opened a team link
- * without ever signing in. Here a 401 gets one refresh attempt and then
- * simply means "signed out".
+ * libs/ngx-auth's interceptor. For a 401 outside the refresh endpoint, that
+ * interceptor attempts a refresh; if the refresh returns 401, it calls
+ * `AuthService.expireSession()` and propagates the refresh 401 to the caller
+ * without navigating. Here the service manages its own session state: a 401
+ * gets one refresh attempt and then simply means "signed out".
  *
  * The restore does not block the first render (the 2022 site gated every page
  * behind it, and felt slow); pages that care read {@link state}.
