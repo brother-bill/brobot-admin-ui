@@ -40,11 +40,14 @@ export interface LeaderboardEntry {
 
 export type PokemonGender = 'M' | 'F' | 'N';
 
-/** A Pokémon on a team (`GET /api/pokemon/teams`). Carries no ids. */
+/**
+ * A Pokémon on a team (`GET /api/pokemon/teams`). Carries no ids. `slot` is
+ * null while the Pokémon is away in pmd-online (`activeGame: 'pmd'`).
+ */
 export interface TeamPokemon {
     name: string;
     nameId: string;
-    slot: number;
+    slot: number | null;
     level: number;
     shiny: boolean;
     wins: number;

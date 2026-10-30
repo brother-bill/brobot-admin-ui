@@ -5,9 +5,9 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { TeamPokemon, TeamResponse } from '../core/brobot-api';
 import { API, appTestProviders, text } from '../testing/test-helpers';
-import { TeamSearchPage, toSlots } from './team-search.page';
+import { TeamSearchPage, toAway, toSlots } from './team-search.page';
 
-function pokemon(slot: number, overrides: Partial<TeamPokemon> = {}): TeamPokemon {
+function pokemon(slot: number | null, overrides: Partial<TeamPokemon> = {}): TeamPokemon {
     return {
         name: 'Pikachu',
         nameId: 'pikachu',
@@ -35,7 +35,20 @@ function pokemon(slot: number, overrides: Partial<TeamPokemon> = {}): TeamPokemo
 const TEAM: TeamResponse = {
     displayName: 'Viewer_One',
     pokemonTeam: {
-        pokemon: [pokemon(1), pokemon(3, { name: 'Eevee', nameId: 'eevee', dexNum: 133, gender: 'M', activeGame: 'pmd', shiny: true })],
+        pokemon: [pokemon(1), pokemon(3, { name: 'Eevee', nameId: 'eevee', dexNum: 133, gender: 'M', shiny: true })],
+    },
+};
+
+/** Two slotted, two away in pmd-online (no slot). */
+const TEAM_WITH_AWAY: TeamResponse = {
+    displayName: 'Viewer_Two',
+    pokemonTeam: {
+        pokemon: [
+            pokemon(2, { name: 'Eevee', nameId: 'eevee', dexNum: 133, gender: 'M' }),
+            pokemon(null, { name: 'Bulbasaur', nameId: 'bulbasaur', dexNum: 1, gender: 'M', activeGame: 'pmd', level: 30 }),
+            pokemon(5),
+            pokemon(null, { name: 'Squirtle', nameId: 'squirtle', dexNum: 7, gender: 'F', activeGame: 'pmd', shiny: true }),
+        ],
     },
 };
 
@@ -46,6 +59,21 @@ describe('toSlots', () => {
         expect(slots.map(s => s.pokemon?.name ?? null)).toEqual(['Pikachu', null, 'Eevee', null, null, null]);
         expect(slots[0]?.pokemon?.artUrl).toBe('https://art.test/female/25');
         expect(toSlots(null, 'x').every(s => s.pokemon === null)).toBe(true);
+    });
+
+    it('leaves Pokémon without a slot out of the six', () => {
+        const slots = toSlots(TEAM_WITH_AWAY.pokemonTeam, 'https://art.test');
+        expect(slots.map(s => s.pokemon?.name ?? null)).toEqual([null, 'Eevee', null, null, 'Pikachu', null]);
+    });
+});
+
+describe('toAway', () => {
+    it('lists the Pokémon without a slot, in API order, with their art', () => {
+        const away = toAway(TEAM_WITH_AWAY.pokemonTeam, 'https://art.test');
+        expect(away.map(p => p.name)).toEqual(['Bulbasaur', 'Squirtle']);
+        expect(away[1]?.artUrl).toBe('https://art.test/shiny/7');
+        expect(toAway(TEAM.pokemonTeam, 'x')).toEqual([]);
+        expect(toAway(null, 'x')).toEqual([]);
     });
 });
 
@@ -86,8 +114,78 @@ describe('TeamSearchPage', () => {
         expect(text(slots[0] as HTMLElement)).toContain('3 wins, 1 losses, 0 draws');
         expect(text(slots[1] as HTMLElement)).toContain('Empty');
         expect(text(slots[2] as HTMLElement)).toContain('Shiny');
-        expect(text(slots[2] as HTMLElement)).toContain('Away in PMD');
         expect(root.querySelector('[aria-live="polite"]')?.textContent).toBe("Viewer_One's team: 2 Pokémon.");
+    });
+
+    it('shows no away group or away count when every Pokémon has a slot', async () => {
+        await harness.navigateByUrl('/pokemon/team?username=Viewer_One', TeamSearchPage);
+        TestBed.tick();
+        http.expectOne(`${API}/pokemon/teams?login=viewer_one`).flush(TEAM);
+        const root = await settled();
+
+        expect(text(root)).toContain('2 of 6 slots filled');
+        expect(text(root)).not.toContain('Away in PMD');
+        expect(text(root)).not.toContain('away in PMD');
+        expect(root.querySelector('#away-heading')).toBeNull();
+    });
+
+    it('lists Pokémon away in PMD under the six slots, counted apart', async () => {
+        await harness.navigateByUrl('/pokemon/team?username=Viewer_Two', TeamSearchPage);
+        TestBed.tick();
+        http.expectOne(`${API}/pokemon/teams?login=viewer_two`).flush(TEAM_WITH_AWAY);
+        const root = await settled();
+
+        const slots = [...root.querySelectorAll('ol.slots > li')] as HTMLElement[];
+        expect(slots).toHaveLength(6);
+        expect(slots.map(li => li.querySelector('h3')?.firstChild?.textContent?.trim() ?? null)).toEqual([
+            null,
+            'Eevee',
+            null,
+            null,
+            'Pikachu',
+            null,
+        ]);
+        expect(text(slots[0]!)).toContain('Slot 1');
+        expect(text(slots[0]!)).toContain('Empty');
+        expect(slots.some(li => text(li).includes('Away in PMD'))).toBe(false);
+
+        expect(text(root)).toContain('2 of 6 slots filled');
+        expect(text(root)).toContain('2 away in PMD');
+
+        const group = root.querySelector<HTMLElement>('section[aria-labelledby="away-heading"]')!;
+        expect(group.querySelector('h3')?.textContent).toBe('Away in PMD');
+        const away = [...group.querySelectorAll('ul.slots > li')] as HTMLElement[];
+        expect(away).toHaveLength(2);
+        const first = away[0]!.querySelector('article')!;
+        const name = first.querySelector('h4')!;
+        expect(text(name).trim()).toBe('Bulbasaur ♂(Male)');
+        expect(first.getAttribute('aria-labelledby')).toBe(name.id);
+        expect(text(first)).toContain('Away in PMD');
+        expect(text(first)).toContain('Lv 30');
+        expect(text(first)).not.toContain('Slot');
+        expect(text(away[1]!)).toContain('Squirtle');
+        expect(text(away[1]!)).toContain('Shiny');
+
+        const ids = [...root.querySelectorAll('[id]')].map(el => el.id);
+        expect(new Set(ids).size).toBe(ids.length);
+        expect(root.querySelector('[aria-live="polite"]')?.textContent).toBe(
+            "Viewer_Two's team: 2 Pokémon, 2 away in PMD.",
+        );
+    });
+
+    it('still shows the away group when every Pokémon is away', async () => {
+        await harness.navigateByUrl('/pokemon/team?username=Viewer_Three', TeamSearchPage);
+        TestBed.tick();
+        http.expectOne(`${API}/pokemon/teams?login=viewer_three`).flush({
+            displayName: 'Viewer_Three',
+            pokemonTeam: { pokemon: [pokemon(null, { activeGame: 'pmd' })] },
+        } satisfies TeamResponse);
+        const root = await settled();
+
+        expect(text(root)).not.toContain('has no Pokémon yet');
+        expect(root.querySelectorAll('ol.slots > li article')).toHaveLength(0);
+        expect(text(root)).toContain('0 of 6 slots filled');
+        expect(root.querySelectorAll('section[aria-labelledby="away-heading"] li article')).toHaveLength(1);
     });
 
     it('explains a login brobot has never seen', async () => {
