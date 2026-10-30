@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath, URL } from 'node:url';
@@ -7,12 +7,30 @@ import { spawnSync } from 'node:child_process';
 import { test } from 'node:test';
 import ts from 'typescript';
 import { checkFreshness } from '../../../scripts/check-library-freshness.mjs';
+import { sealReceipts } from '../../../scripts/library-build-receipt.mjs';
 
 const app = fileURLToPath(new URL('../', import.meta.url));
 const root = resolve(app, '../..');
 const pkg = JSON.parse(readFileSync(resolve(app, 'package.json'), 'utf8'));
 const desktop = pkg.name === '@singularity/brobot-client';
 const shellQuote = value => "'" + value.replaceAll("'", "'\"'\"'") + "'";
+// The lockfile pins every compiler a build receipt records; versions are arbitrary.
+const LOCK = `lockfileVersion: '9.0'
+
+importers:
+
+  .:
+    devDependencies:
+      '@angular/compiler-cli':
+        specifier: ^21.0.0
+        version: 21.2.15(typescript@5.9.3)
+      ng-packagr:
+        specifier: ^21.0.0
+        version: 21.2.5(typescript@5.9.3)
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+`;
 const configs = ['tsconfig.app.json', 'tsconfig.spec.json', 'tsconfig.editor.json',
     desktop ? 'tsconfig.electron.json' : 'e2e/tsconfig.json'];
 const expected = {
@@ -98,13 +116,23 @@ test('direct entry points reject stale compiled output before invoking builders 
                 baseUrl: '../..', paths: { '@singularity/ngx-ui': ['libs/ngx-ui/src/index.ts'] },
             } });
         }
-        write('libs/ngx-ui/package.json', { name: '@singularity/ngx-ui', exports: { '.': './src/index.ts' } });
-        write('libs/ngx-ui/ng-package.json', { dest: '../../dist/libs/ngx-ui' });
-        write('libs/ngx-ui/src/index.ts', 'export const value = 2;');
-        assert.deepEqual(checkFreshness({ root: fixture, consumer, tsconfig: 'tsconfig.app.json' }), [], 'source consumption needs no compiled output');
-        const output = write('dist/libs/ngx-ui/fesm2022/singularity-ngx-ui.mjs', 'export const value = 1;');
+        // Build receipts record the toolchain pins alongside the library's inputs.
+        write('package.json', { name: 'fixture', packageManager: 'pnpm@11.5.1' });
+        write('.nvmrc', '22.15.0\n');
+        write('pnpm-lock.yaml', LOCK);
+        write('libs/ngx-ui/package.json', { name: '@singularity/ngx-ui', scripts: { build: 'ng-packagr -p ng-package.json' },
+            exports: { '.': './src/index.ts' } });
+        write('libs/ngx-ui/ng-package.json', { dest: '../../dist/libs/ngx-ui', lib: { entryFile: 'src/index.ts' } });
+        write('libs/ngx-ui/src/index.ts', 'export const value = 1;');
+        const check = () => checkFreshness({ root: fixture, consumer, tsconfig: 'tsconfig.app.json' });
+        assert.deepEqual(check(), [], 'source consumption needs no compiled output');
+        write('dist/libs/ngx-ui/fesm2022/singularity-ngx-ui.mjs', 'export const value = 1;');
         write('dist/libs/ngx-ui/package.json', { exports: { '.': './fesm2022/singularity-ngx-ui.mjs' } });
-        utimesSync(output, new Date(0), new Date(0));
+        sealReceipts({ root: fixture, package: '@singularity/ngx-ui' });
+        assert.deepEqual(check(), [], 'sealed output matching its sources is fresh');
+        // Staleness is content, not timestamps: a changed compiler input
+        // invalidates the receipt, so the existing output is stale.
+        write('libs/ngx-ui/src/index.ts', 'export const value = 2;');
         for (const operation of [...(desktop ? ['build', 'build:renderer'] : ['build']), 'typecheck', 'test']) {
             const command = pkg.scripts[operation];
             assert.ok(command.startsWith(`node ../../scripts/check-library-freshness.mjs --consumer ${consumer} --tsconfig `));
@@ -114,13 +142,13 @@ test('direct entry points reject stale compiled output before invoking builders 
                 `${shellQuote(resolve(root, 'scripts/check-library-freshness.mjs'))} --root ${shellQuote(fixture)}`);
             const result = spawnSync(probe, { shell: true, cwd: resolve(fixture, consumer), encoding: 'utf8' });
             assert.equal(result.status, 1, result.stdout + result.stderr);
-            assert.match(result.stderr, /stale compiled output/);
-            assert.match(result.stderr, /pnpm exec turbo run build --filter=@singularity\/ngx-ui --force/);
+            assert.match(result.stderr, /^stale compiled output: dist\/libs\/ngx-ui$/m);
+            assert.match(result.stderr, /^Recovery \(from repository root\): pnpm exec turbo run build --filter=@singularity\/ngx-ui$/m);
         }
         if (!desktop) {
             rmSync(resolve(fixture, 'dist'), { recursive: true });
             write('libs/contracts/package.json', { name: '@singularity/contracts' });
-            const diagnostics = checkFreshness({ root: fixture, consumer, tsconfig: 'tsconfig.app.json' });
+            const diagnostics = check();
             assert.ok(diagnostics.some(item => item.kind === 'generated' && item.command === 'pnpm run generate:contracts'));
         }
     } finally {
