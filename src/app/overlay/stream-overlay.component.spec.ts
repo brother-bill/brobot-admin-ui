@@ -6,7 +6,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { OverlayFrame, OverlaySocket, OverlaySocketStatus } from './overlay-socket';
 import { OVERLAY_SOCKET } from './overlay-socket';
 import { OverlaySound } from './overlay-sound';
-import { QUACK_URL, ROAR_MS, StreamOverlayComponent } from './stream-overlay.component';
+import {
+    DEBS_ALERT_URL,
+    DEBS_SCALE_MS,
+    QUACK_URL,
+    ROAR_MS,
+    StreamOverlayComponent,
+    debsAlertDurationMs,
+} from './stream-overlay.component';
 
 class FakeSocket implements OverlaySocket {
     readonly frames = new Subject<OverlayFrame>();
@@ -18,6 +25,23 @@ const roar = (login: string, name: string): OverlayFrame => ({
     type: 'pokemon_roar',
     login,
     pokemon: { name, nameId: name.toLowerCase(), dexNum: 25, level: 30, shiny: false, gender: 'M', color: 'Yellow' },
+});
+
+const debs = (displayName: string, message: string): OverlayFrame => ({
+    type: 'debs_alert',
+    login: displayName.toLowerCase(),
+    displayName,
+    message,
+});
+
+describe('debsAlertDurationMs', () => {
+    it('gives a second per 280 px of message, rounded up, plus four', () => {
+        expect(debsAlertDurationMs(0)).toBe(4_000);
+        expect(debsAlertDurationMs(1)).toBe(5_000);
+        expect(debsAlertDurationMs(280)).toBe(5_000);
+        expect(debsAlertDurationMs(281)).toBe(6_000);
+        expect(debsAlertDurationMs(2_800)).toBe(14_000);
+    });
 });
 
 describe('StreamOverlayComponent', () => {
@@ -78,6 +102,69 @@ describe('StreamOverlayComponent', () => {
         vi.advanceTimersByTime(ROAR_MS);
         fixture.detectChanges();
         expect(root.querySelector('figure')).toBeNull();
+    });
+
+    it('scrolls DEBS Alerts one after another, each with the jingle and an announcement', () => {
+        const { fixture, root } = render();
+        socket.frames.next(debs('Viewer_One', 'Breaking news'));
+        socket.frames.next(debs('Viewer_Two', 'More news'));
+        fixture.detectChanges();
+
+        // jsdom lays nothing out, so the message measures 0 px: 4 s of scroll.
+        const text = () => root.querySelector<HTMLElement>('.debs__text');
+        expect(text()?.textContent.trim()).toBe('Breaking news');
+        expect(text()?.style.animationDuration).toBe('4000ms');
+        expect(text()?.classList).toContain('debs__text--scrolling');
+        expect(played).toEqual([DEBS_ALERT_URL]);
+        expect(root.textContent).toContain('Viewer_One says: Breaking news');
+
+        vi.advanceTimersByTime(4_000);
+        fixture.detectChanges();
+        expect(root.querySelector('.debs')?.classList).toContain('debs--leaving');
+        expect(played).toHaveLength(1);
+
+        vi.advanceTimersByTime(DEBS_SCALE_MS);
+        fixture.detectChanges();
+        expect(text()?.textContent.trim()).toBe('More news');
+        expect(root.querySelector('.debs')?.classList).not.toContain('debs--leaving');
+        expect(played).toEqual([DEBS_ALERT_URL, DEBS_ALERT_URL]);
+        expect(root.textContent).toContain('Viewer_Two says: More news');
+
+        vi.advanceTimersByTime(4_000 + DEBS_SCALE_MS);
+        fixture.detectChanges();
+        expect(root.querySelector('.debs')).toBeNull();
+    });
+
+    it('scrolls a DEBS Alert for as long as its measured width needs', () => {
+        const scrollWidth = vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockReturnValue(1_000);
+        try {
+            const { fixture, root } = render();
+            socket.frames.next(debs('Viewer', 'A long message'));
+            fixture.detectChanges();
+            expect(root.querySelector<HTMLElement>('.debs__text')?.style.animationDuration).toBe('8000ms');
+
+            vi.advanceTimersByTime(7_999);
+            fixture.detectChanges();
+            expect(root.querySelector('.debs')?.classList).not.toContain('debs--leaving');
+            vi.advanceTimersByTime(1);
+            fixture.detectChanges();
+            expect(root.querySelector('.debs')?.classList).toContain('debs--leaving');
+        } finally {
+            scrollWidth.mockRestore();
+        }
+    });
+
+    it('shows a roar and a DEBS Alert at the same time', () => {
+        const { fixture, root } = render();
+        socket.frames.next(roar('viewer_one', 'Pikachu'));
+        socket.frames.next(debs('Viewer_Two', 'Hello'));
+        fixture.detectChanges();
+        expect(root.querySelector('figure')?.classList).toContain('roar--above-debs');
+        expect(root.querySelector('.debs__text')?.textContent.trim()).toBe('Hello');
+        expect(played).toHaveLength(2);
+        expect(played[1]).toBe(DEBS_ALERT_URL);
+        expect(root.textContent).toContain("viewer_one's Pikachu roars!");
+        expect(root.textContent).toContain('Viewer_Two says: Hello');
     });
 
     it('draws a running vote and hides it when it resets', () => {

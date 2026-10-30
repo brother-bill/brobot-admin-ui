@@ -101,6 +101,17 @@ export function parseOverlayFrame(value: unknown): OverlayFrame | null {
                 },
             };
         }
+        case 'debs_alert': {
+            const { login, displayName, message } = value;
+            if (
+                typeof login !== 'string' ||
+                typeof displayName !== 'string' ||
+                typeof message !== 'string'
+            ) {
+                return null;
+            }
+            return { type: 'debs_alert', login, displayName, message };
+        }
         case 'vote_state': {
             const { vote, count, threshold, caged } = value;
             if (
