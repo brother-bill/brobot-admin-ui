@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { HttpErrorResponse, httpResource } from '@angular/common/http';
 import type {
     ElementRef} from '@angular/core';
@@ -26,16 +25,18 @@ import {
     LibSpinnerComponent,
 } from '@singularity/ngx-ui';
 import { environment } from '../../environments/environment';
-import type { TeamPokemon, TeamResponse } from '../core/brobot-api';
+import type { TeamResponse } from '../core/brobot-api';
 import { BrobotApi, TWITCH_LOGIN_PATTERN } from '../core/brobot-api';
 import { describeHttpError } from '../core/http-errors';
-import { genderLabel, genderSymbol, pokemonArtUrl } from '../core/pokemon-art';
+import { pokemonArtUrl } from '../core/pokemon-art';
+import type { TeamCardPokemon } from './team-card.component';
+import { TeamCardComponent } from './team-card.component';
 
 export const TEAM_SLOTS = 6;
 
 export interface TeamSlot {
     slot: number;
-    pokemon: (TeamPokemon & { artUrl: string }) | null;
+    pokemon: TeamCardPokemon | null;
 }
 
 /** Six slots, in order, empty ones included — the shape `!pokemon team` describes. */
@@ -48,6 +49,11 @@ export function toSlots(team: TeamResponse['pokemonTeam'], artBase: string): Tea
     });
 }
 
+/** The Pokémon with no slot: away in pmd-online, in the order the API sent them. */
+export function toAway(team: TeamResponse['pokemonTeam'], artBase: string): TeamCardPokemon[] {
+    return (team?.pokemon ?? []).filter(p => p.slot === null).map(p => ({ ...p, artUrl: pokemonArtUrl(artBase, p) }));
+}
+
 /**
  * A viewer's team, by Twitch login. The login lives in the URL
  * (`/pokemon/team?username=`), which is the link `!pokemon team` posts in
@@ -57,7 +63,6 @@ export function toSlots(team: TeamResponse['pokemonTeam'], artBase: string): Tea
     selector: 'app-team-search-page',
     changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [
-        DatePipe,
         ReactiveFormsModule,
         LibAlertBannerComponent,
         LibBtnDirective,
@@ -68,6 +73,7 @@ export function toSlots(team: TeamResponse['pokemonTeam'], artBase: string): Tea
         LibInputDirective,
         LibLabelComponent,
         LibSpinnerComponent,
+        TeamCardComponent,
     ],
     styles: `
         .search {
@@ -90,67 +96,6 @@ export function toSlots(team: TeamResponse['pokemonTeam'], artBase: string): Tea
             margin: 0;
             padding: 0;
             list-style: none;
-        }
-        .card {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-            height: 100%;
-            padding: 1rem;
-            border-radius: 16px;
-            background: var(--ui-surface-container);
-            border: 1px solid var(--ui-outline-variant);
-        }
-        .card--empty {
-            justify-content: center;
-            color: var(--ui-on-surface-variant);
-            border-style: dashed;
-            background: transparent;
-        }
-        .card__slot {
-            font: var(--ui-label-medium);
-            color: var(--ui-on-surface-variant);
-        }
-        .card__head {
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            gap: 0.5rem;
-        }
-        .card__name {
-            font: var(--ui-title-medium);
-        }
-        .card__level {
-            font: var(--ui-label-large);
-            font-variant-numeric: tabular-nums;
-        }
-        .card__art {
-            align-self: center;
-            width: 9rem;
-            height: 9rem;
-            object-fit: contain;
-        }
-        .facts {
-            display: grid;
-            grid-template-columns: auto 1fr;
-            gap: 0.25rem 0.75rem;
-            margin: 0;
-            font: var(--ui-body-small);
-        }
-        .facts dt {
-            color: var(--ui-on-surface-variant);
-        }
-        .facts dd {
-            margin: 0;
-        }
-        details summary {
-            cursor: pointer;
-            min-height: 24px;
-            font: var(--ui-label-large);
-        }
-        details ul {
-            margin: 0.5rem 0 0;
-            padding-inline-start: 1.25rem;
         }
     `,
     template: `
@@ -182,73 +127,41 @@ export function toSlots(team: TeamResponse['pokemonTeam'], artBase: string): Tea
                     @let result = team.value();
                     <section class="stack" aria-labelledby="team-heading">
                         <h2 class="section-title" id="team-heading">{{ result.displayName }}'s team</h2>
-                        @if (memberCount() === 0) {
+                        @if (memberCount() === 0 && away().length === 0) {
                             <p>{{ result.displayName }} has no Pokémon yet.</p>
                         } @else {
+                            <p class="row">
+                                <span>{{ memberCount() }} of {{ slotCount }} slots filled</span>
+                                @if (away().length > 0) {
+                                    <lib-info-pill variant="info">{{ away().length }} away in PMD</lib-info-pill>
+                                }
+                            </p>
                             <ol class="slots">
                                 @for (slot of slots(); track slot.slot) {
                                     <li>
-                                        @if (slot.pokemon; as p) {
-                                            <article class="card" [attr.aria-labelledby]="'slot-' + slot.slot">
-                                                <span class="card__slot">Slot {{ slot.slot }}</span>
-                                                <div class="card__head">
-                                                    <h3 class="card__name" [id]="'slot-' + slot.slot">
-                                                        {{ p.name }}
-                                                        <span aria-hidden="true">{{ symbol(p.gender) }}</span>
-                                                        <span class="sr-only">({{ gender(p.gender) }})</span>
-                                                    </h3>
-                                                    <span class="card__level">Lv {{ p.level }}</span>
-                                                </div>
-                                                <div class="row">
-                                                    @if (p.shiny) {
-                                                        <lib-info-pill variant="tertiary">Shiny</lib-info-pill>
-                                                    }
-                                                    @if (p.activeGame === 'pmd') {
-                                                        <lib-info-pill variant="info">Away in PMD</lib-info-pill>
-                                                    }
-                                                </div>
-                                                <img class="card__art" [src]="p.artUrl" alt="" loading="lazy" />
-                                                <dl class="facts">
-                                                    <dt>Types</dt>
-                                                    <dd>{{ p.types.join(' / ') || '—' }}</dd>
-                                                    <dt>Record</dt>
-                                                    <dd>
-                                                        {{ p.wins }} wins, {{ p.losses }} losses, {{ p.draws }} draws
-                                                    </dd>
-                                                </dl>
-                                                <details>
-                                                    <summary>Moves and details</summary>
-                                                    <dl class="facts">
-                                                        <dt>Pokédex</dt>
-                                                        <dd>#{{ p.dexNum }}</dd>
-                                                        <dt>Nature</dt>
-                                                        <dd>{{ p.nature || '—' }}</dd>
-                                                        <dt>Ability</dt>
-                                                        <dd>{{ p.ability || '—' }}</dd>
-                                                        <dt>Item</dt>
-                                                        <dd>{{ p.item || 'None' }}</dd>
-                                                        <dt>Caught</dt>
-                                                        <dd>{{ p.createdDate | date: 'mediumDate' }}</dd>
-                                                    </dl>
-                                                    <h4 class="sr-only">Moves</h4>
-                                                    <ul>
-                                                        @for (move of p.moves; track $index) {
-                                                            <li>{{ move }}</li>
-                                                        } @empty {
-                                                            <li>No moves</li>
-                                                        }
-                                                    </ul>
-                                                </details>
-                                            </article>
-                                        } @else {
-                                            <div class="card card--empty">
-                                                <span class="card__slot">Slot {{ slot.slot }}</span>
-                                                <p>Empty</p>
-                                            </div>
-                                        }
+                                        <app-team-card
+                                            [pokemon]="slot.pokemon"
+                                            [label]="'Slot ' + slot.slot"
+                                            [cardId]="'slot-' + slot.slot" />
                                     </li>
                                 }
                             </ol>
+                            @if (away().length > 0) {
+                                <section class="stack" aria-labelledby="away-heading">
+                                    <h3 class="section-title" id="away-heading">Away in PMD</h3>
+                                    <ul class="slots">
+                                        @for (p of away(); track $index) {
+                                            <li>
+                                                <app-team-card
+                                                    [pokemon]="p"
+                                                    label="Away in PMD"
+                                                    [cardId]="'away-' + $index"
+                                                    [headingLevel]="4" />
+                                            </li>
+                                        }
+                                    </ul>
+                                </section>
+                            }
                         }
                     </section>
                 } @else if (team.error()) {
@@ -295,6 +208,13 @@ export class TeamSearchPage {
         this.team.hasValue() ? toSlots(this.team.value().pokemonTeam, environment.pokemonArtUrl) : [],
     );
 
+    protected readonly away = computed(() =>
+        this.team.hasValue() ? toAway(this.team.value().pokemonTeam, environment.pokemonArtUrl) : [],
+    );
+
+    protected readonly slotCount = TEAM_SLOTS;
+
+    /** Slotted Pokémon only; the away ones are counted apart. */
     protected readonly memberCount = computed(() => this.slots().filter(s => s.pokemon).length);
 
     protected readonly notFound = computed(() => {
@@ -305,7 +225,9 @@ export class TeamSearchPage {
     /** Found teams only: a failed search is announced by its alert banner. */
     protected readonly announcement = computed(() => {
         if (!this.login() || !this.team.hasValue()) return '';
-        return `${this.team.value().displayName}'s team: ${this.memberCount()} Pokémon.`;
+        const away = this.away().length;
+        const awayPart = away > 0 ? `, ${away} away in PMD` : '';
+        return `${this.team.value().displayName}'s team: ${this.memberCount()} Pokémon${awayPart}.`;
     });
 
     constructor() {
@@ -345,13 +267,5 @@ export class TeamSearchPage {
     protected searchError(login: string): string {
         if (this.notFound()) return `brobot has never seen a Twitch user called ${login}.`;
         return describeHttpError(this.team.error());
-    }
-
-    protected symbol(gender: string): string {
-        return genderSymbol(gender);
-    }
-
-    protected gender(gender: string): string {
-        return genderLabel(gender);
     }
 }

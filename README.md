@@ -22,7 +22,7 @@ overlay here only shows what the API sends it.
 |---|---|---|
 | `/commands` (and `/`) | everyone | Every chat command, by category, and whether it is on. Admins get a switch per command (`POST /api/commands`). |
 | `/pokemon/leaderboard` | everyone | Top 30 Pokémon by level, each linked to its trainer's team. |
-| `/pokemon/team?username=` | everyone | Six slots of a viewer's team, looked up by Twitch login. The login is in the URL: it is the link `!pokemon team` posts. |
+| `/pokemon/team?username=` | everyone | Six slots of a viewer's team, looked up by Twitch login, then an "Away in PMD" group for the Pokémon with no slot (away in pmd-online). The login is in the URL: it is the link `!pokemon team` posts. |
 | `/pokemon/battleoutcome` | everyone | The logs of the last 1v1 and the last team battle. |
 | `/login` | everyone | Sign in with Twitch. Admins also get the streamer and bot account links. |
 | `/twitch/supahot/overlay` (and `/overlay`) | OBS | The browser source: transparent, no header, no session. |
