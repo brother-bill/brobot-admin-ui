@@ -86,6 +86,14 @@ describe('parseOverlayFrame', () => {
             pokemon: { name: 'Pikachu', nameId: 'pikachu', dexNum: 25, level: 9, shiny: false, gender: 'F', color: 'Yellow' },
         };
         expect(parseOverlayFrame(roar)).toEqual(roar);
+        const debs = { type: 'debs_alert', login: 'viewer', displayName: 'Viewer', message: 'Breaking news' };
+        expect(parseOverlayFrame(debs)).toEqual(debs);
+    });
+
+    it('keeps only the fields it knows from a DEBS Alert', () => {
+        expect(
+            parseOverlayFrame({ type: 'debs_alert', login: 'v', displayName: 'V', message: 'Hi', extra: true }),
+        ).toEqual({ type: 'debs_alert', login: 'v', displayName: 'V', message: 'Hi' });
     });
 
     it('accepts the proposed vote frame', () => {
@@ -98,6 +106,10 @@ describe('parseOverlayFrame', () => {
         expect(parseOverlayFrame(null)).toBeNull();
         expect(parseOverlayFrame('quack')).toBeNull();
         expect(parseOverlayFrame({ type: 'pokemon_roar', login: 'x', pokemon: { name: 'P' } })).toBeNull();
+        expect(parseOverlayFrame({ type: 'debs_alert', login: 'v', displayName: 'V' })).toBeNull();
+        expect(parseOverlayFrame({ type: 'debs_alert', login: 'v', displayName: 'V', message: 42 })).toBeNull();
+        expect(parseOverlayFrame({ type: 'debs_alert', login: 'v', message: 'Hi' })).toBeNull();
+        expect(parseOverlayFrame({ type: 'debs_alert', login: null, displayName: 'V', message: 'Hi' })).toBeNull();
         expect(parseOverlayFrame({ type: 'vote_state', vote: 'kick', count: 1, threshold: 4, caged: false })).toBeNull();
         expect(parseOverlayFrame({ type: 'vote_state', vote: 'chatban', count: 1, threshold: 0, caged: false })).toBeNull();
     });

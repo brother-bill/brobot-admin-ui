@@ -78,6 +78,12 @@ reconnects 3 s after any close, clean or not, and shows:
 
 - `pokemon_roar`: the viewer's Pokémon and its name, with its cry. Roars
   queue and never overlap.
+- `debs_alert`: a viewer's DEBS Alert redeem, as a news ticker near the
+  bottom. The message scrolls right to left in one line for
+  `ceil(width / 280) s + 4 s` (the 2022 marquee's timing), with the DEBS
+  jingle at the start. Alerts queue one at a time; a roar and an alert can
+  share the screen. The overlay sends nothing back; brobot rate-limits the
+  redeem itself.
 - `quack`: the duck sound.
 - `vote_state` (**proposed; brobot does not send it yet**): a meter for a
   running `!chatban` / `!voiceban` vote. It turns orange when the threshold is
@@ -90,7 +96,8 @@ The page only ever sees the `OverlaySocket` interface
 (`overlay/overlay-socket.ts`); the specs provide a fake one.
 
 The card art and sounds still come from the 2022 Cloudinary set
-(`environment.pokemonArtUrl` / `pokemonCryUrl`, and the duck in the overlay).
+(`environment.pokemonArtUrl` / `pokemonCryUrl`, and the duck and the DEBS
+jingle in the overlay).
 The migration plan names R2 as their future home. Moving them means changing
 those URLs.
 
