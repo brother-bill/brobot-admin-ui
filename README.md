@@ -37,21 +37,26 @@ site only decides what to show.
 
 ## Auth
 
-brobot's session is a JWT pair in `httpOnly` cookies. It has the same shape
-api-time issues, so **libs/ngx-auth's `authInterceptor`** is used unchanged.
-It sends credentials on every request and answers a 401 with one refresh.
-That refresh goes through the generated contracts client, whose base path is
-set to brobot's `/api`, so it lands on brobot's `POST /api/auth/refresh`
-alias (see `app.config.ts`).
+brobot's session is a JWT pair in `httpOnly` cookies, the same shape
+api-time issues, so **libs/ngx-auth** is used unchanged: its `authInterceptor`
+sends credentials to brobot's `/api` and answers a 401 with one refresh, and
+its `SessionStore` owns who is signed in. `provideBrobotSession()`
+(`core/session.ts`) points the store, and so the interceptor's refresh, at
+brobot's `GET /api/auth/twitch/status`, `POST /api/auth/refresh` and
+`POST /api/auth/twitch/logout`. There is no `HttpBackend` bypass.
 
-The site does not use ngx-auth's current-user lookup or route guards:
-that lookup reads api-time's `/api/auth/current-user`, and every page here
-is public, with admin controls hidden rather than routed away from.
-`SessionService` asks brobot's `GET /api/auth/twitch/status` through an
-`HttpBackend` client and manages its own session state. A refused refresh
-means "signed out". For other requests, the shared interceptor expires its
-session and propagates a refresh 401 without navigating.
-
+- The shell's route starts the store (`startSession()` in `app.routes.ts`),
+  so the stream overlay never asks who is signed in, and a route guarded by
+  ngx-auth's `AuthGuard` waits for `authResolved$`. Every page is public
+  today; admin controls are hidden, not routed away from.
+- Pages read the store through `injectSession()`: `status` is
+  `restoring | signed-in | signed-out | unreachable`. A 401 the refresh cannot
+  fix means signed out. Anything else is `unreachable`: never signed out,
+  retried by the store (5, 15, 30, then every 60 s), and `/login` says brobot
+  isn't answering.
+- A refused refresh signs out where the visitor is; it never navigates. A
+  logout lands on `/commands`, and signs out locally even if the API cannot
+  be reached.
 - **Sign in** is a full-page link to `/api/auth/twitch/login`. Before
   leaving, the site stores the current path. The API's callback lands on `/`,
   and the site then returns the viewer to where they were.
@@ -129,8 +134,9 @@ pnpm run test:e2e              # Playwright smoke; the API is mocked with page.r
 
 The initial bundle is ~700 kB raw (~140 kB over the wire). The warning budget
 is 750 kB. About 180 kB of that is the api-time contracts client. ngx-auth's
-interceptor imports its `AuthService` from `@singularity/contracts/angular`,
-and that barrel is consumed as source, so no generated service tree-shakes.
-Another ~80 kB is ngx-ui's icon sprite. Both costs come from the shared libs,
-and the fix belongs there: an ngx-auth refresh that does not go through the
-generated client.
+`SessionStore` imports its `AuthService` from `@singularity/contracts/angular`
+for api-time's default endpoints, and that barrel is consumed as source, so no
+generated service tree-shakes. Another ~80 kB is ngx-ui's icon sprite. Both
+costs come from the shared libs, and the fix belongs there: brobot replaces
+those default endpoints, but ngx-auth still imports the generated client to
+define them.
