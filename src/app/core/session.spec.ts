@@ -125,16 +125,55 @@ describe('the brobot session (ngx-auth SessionStore on brobot endpoints)', () =>
         expect(router.url).toBe('/');
     });
 
-    it('signs out locally even when the logout request fails', async () => {
+    it('keeps the user signed in when the logout request fails, and lands on /commands once a retry succeeds', async () => {
         const router = TestBed.inject(Router);
         await router.navigateByUrl('/home');
         answer('GET', 'auth/twitch/status', 200, user());
-        vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
         store.logout();
+        expect(store.logoutState()).toBe('signing-out');
         answer('POST', 'auth/twitch/logout', 500);
+        // The cookies survived, so the session did too: nothing is faked.
+        expect(store.logoutState()).toBe('failed');
+        expect(session.status()).toBe('signed-in');
+        expect(session.user()?.displayName).toBe('TramaDC');
+        await new Promise(resolve => setTimeout(resolve));
+        expect(router.url).toBe('/home');
+
+        store.logout();
+        answer('POST', 'auth/twitch/logout', 204);
+        expect(store.logoutState()).toBe('idle');
         expect(session.status()).toBe('signed-out');
+        expect(session.user()).toBeNull();
         await new Promise(resolve => setTimeout(resolve));
         expect(router.url).toBe('/commands');
+    });
+
+    it('keeps the signed-in user, and their admin role, through a keep-alive outage', () => {
+        vi.useFakeTimers();
+        store.init();
+        answer('GET', 'auth/twitch/status', 200, user({ roles: ['StreamerAuth'] }));
+
+        // The 10-minute keep-alive renewal finds brobot down.
+        vi.advanceTimersByTime(10 * 60 * 1000);
+        answer('POST', 'auth/refresh', 503);
+        expect(session.status()).toBe('unreachable');
+        expect(session.user()?.displayName).toBe('TramaDC');
+        expect(session.isAdmin()).toBe(true);
+
+        vi.advanceTimersByTime(5_000);
+        answer('GET', 'auth/twitch/status', 200, user({ roles: ['StreamerAuth'] }));
+        expect(session.status()).toBe('signed-in');
+        expect(session.isAdmin()).toBe(true);
+    });
+
+    it('has no user during an outage that came before any answer', () => {
+        vi.useFakeTimers();
+        store.init();
+        answer('GET', 'auth/twitch/status', 0);
+        expect(session.status()).toBe('unreachable');
+        expect(session.user()).toBeNull();
+        expect(session.isAdmin()).toBe(false);
     });
 
     it('returns only to in-app paths, once', () => {

@@ -88,6 +88,52 @@ describe('ShellComponent', () => {
         expect(TestBed.inject(Router).url).toBe('/commands');
     });
 
+    it('says so when the logout fails, keeps the user signed in and focused, and a retry lands on /commands', async () => {
+        await harness.navigateByUrl('/pokemon/leaderboard');
+        let root = await answerStatus(200, user({ roles: ['StreamerAuth'] }));
+        const logOut = (): HTMLButtonElement =>
+            [...root.querySelectorAll('button')].find(b => b.textContent.includes('Log out'))!;
+
+        logOut().focus();
+        logOut().click();
+        root = await tick();
+        // Signing out: the button says so but keeps focus, and a second press is ignored.
+        expect(logOut().getAttribute('aria-disabled')).toBe('true');
+        expect(logOut().disabled).toBe(false);
+        expect(document.activeElement).toBe(logOut());
+        logOut().click();
+        http.expectOne(r => r.method === 'POST' && r.url === `${API}/auth/twitch/logout`).flush(null, {
+            status: 0,
+            statusText: 'Unknown Error',
+        });
+        root = await tick();
+
+        const alert = root.querySelector('[role="alert"]');
+        expect(alert?.textContent.trim()).toBe(
+            "Couldn't log you out: brobot isn't answering. You're still signed in on this browser; try again.",
+        );
+        expect(text(root)).toContain('Signed in as TramaDC');
+        expect(text(root)).toContain('Admin');
+        expect(text(root)).not.toContain('Sign in with Twitch');
+        expect(logOut().hasAttribute('aria-disabled')).toBe(false);
+        expect(document.activeElement).toBe(logOut());
+        expect(TestBed.inject(Router).url).toBe('/pokemon/leaderboard');
+
+        logOut().click();
+        root = await tick();
+        // A retry starts: the old error is gone, so a second failure is announced afresh.
+        expect(root.querySelector('[role="alert"]')).toBeNull();
+        http.expectOne(r => r.method === 'POST' && r.url === `${API}/auth/twitch/logout`).flush(null, {
+            status: 204,
+            statusText: 'No Content',
+        });
+        root = await tick();
+        await tick();
+        expect(text(root)).toContain('Sign in with Twitch');
+        expect(root.querySelector('[role="alert"]')).toBeNull();
+        expect(TestBed.inject(Router).url).toBe('/commands');
+    });
+
     it("shows the callback's notice and takes it off the URL", async () => {
         await harness.navigateByUrl('/commands?auth_error=wrong_account');
         const root = await answerStatus(401);

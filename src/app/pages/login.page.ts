@@ -40,67 +40,64 @@ import { injectSession } from '../core/session';
         <div class="page">
             <h1 class="page__title">Account</h1>
 
-            @switch (session.status()) {
-                @case ('restoring') {
-                    <lib-spinner label="Checking whether you are signed in" />
+            @if (session.status() === 'restoring') {
+                <lib-spinner label="Checking whether you are signed in" />
+            } @else if (session.user(); as user) {
+                <p>
+                    You are signed in as <strong>{{ user.displayName }}</strong>.
+                    @if (!session.isAdmin()) {
+                        Viewers don't need to be signed in for anything on this site yet.
+                    }
+                </p>
+                @if (session.status() === 'unreachable') {
+                    <p class="muted">brobot isn't answering right now. You are still signed in.</p>
                 }
-                @case ('signed-in') {
-                    @if (session.user(); as user) {
-                        <p>
-                            You are signed in as <strong>{{ user.displayName }}</strong>.
-                            @if (!session.isAdmin()) {
-                                Viewers don't need to be signed in for anything on this site yet.
-                            }
-                        </p>
-                    }
-                    @if (session.isAdmin()) {
-                        <div class="cards">
-                            <lib-card>
-                                <lib-card-header>
-                                    <lib-card-title><h2 class="card-title">Streamer account</h2></lib-card-title>
-                                </lib-card-header>
-                                <lib-card-content class="stack">
-                                    <p>
-                                        Lets brobot create, pause and refund the channel-point rewards and
-                                        read redemptions. Only the streamer's own Twitch account is accepted.
-                                    </p>
-                                    <div class="row">
-                                        <a libBtn="primary" appearance="outlined" [href]="streamerUrl">
-                                            Link the streamer account
-                                        </a>
-                                    </div>
-                                </lib-card-content>
-                            </lib-card>
-                            <lib-card>
-                                <lib-card-header>
-                                    <lib-card-title><h2 class="card-title">Bot account</h2></lib-card-title>
-                                </lib-card-header>
-                                <lib-card-content class="stack">
-                                    <p>
-                                        Lets brobot chat as bro_____bot. Twitch asks you to pick an account:
-                                        choose the bot's.
-                                    </p>
-                                    <div class="row">
-                                        <a libBtn="primary" appearance="outlined" [href]="botUrl">
-                                            Link the bot account
-                                        </a>
-                                    </div>
-                                </lib-card-content>
-                            </lib-card>
-                        </div>
-                    }
-                }
-                @default {
-                    <p class="page__lede">
-                        Sign in with your Twitch account. brobot only asks Twitch for your profile.
-                    </p>
-                    @if (session.status() === 'unreachable') {
-                        <p class="muted">brobot isn't answering right now, so signing in may fail.</p>
-                    }
-                    <div class="row">
-                        <a libBtn="primary" appearance="filled" [href]="loginUrl">Sign in with Twitch</a>
+                @if (session.isAdmin()) {
+                    <div class="cards">
+                        <lib-card>
+                            <lib-card-header>
+                                <lib-card-title><h2 class="card-title">Streamer account</h2></lib-card-title>
+                            </lib-card-header>
+                            <lib-card-content class="stack">
+                                <p>
+                                    Lets brobot create, pause and refund the channel-point rewards and
+                                    read redemptions. Only the streamer's own Twitch account is accepted.
+                                </p>
+                                <div class="row">
+                                    <a libBtn="primary" appearance="outlined" [href]="streamerUrl">
+                                        Link the streamer account
+                                    </a>
+                                </div>
+                            </lib-card-content>
+                        </lib-card>
+                        <lib-card>
+                            <lib-card-header>
+                                <lib-card-title><h2 class="card-title">Bot account</h2></lib-card-title>
+                            </lib-card-header>
+                            <lib-card-content class="stack">
+                                <p>
+                                    Lets brobot chat as bro_____bot. Twitch asks you to pick an account:
+                                    choose the bot's.
+                                </p>
+                                <div class="row">
+                                    <a libBtn="primary" appearance="outlined" [href]="botUrl">
+                                        Link the bot account
+                                    </a>
+                                </div>
+                            </lib-card-content>
+                        </lib-card>
                     </div>
                 }
+            } @else {
+                <p class="page__lede">
+                    Sign in with your Twitch account. brobot only asks Twitch for your profile.
+                </p>
+                @if (session.status() === 'unreachable') {
+                    <p class="muted">brobot isn't answering right now, so signing in may fail.</p>
+                }
+                <div class="row">
+                    <a libBtn="primary" appearance="filled" [href]="loginUrl">Sign in with Twitch</a>
+                </div>
             }
         </div>
     `,

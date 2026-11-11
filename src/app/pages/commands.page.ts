@@ -72,7 +72,7 @@ interface CommandGroup {
                     You are an admin: the switches below turn a command on or off for everyone, and
                     stay that way after brobot restarts.
                 </p>
-            } @else if (session.status() === 'signed-in') {
+            } @else if (session.user()) {
                 <p class="muted">Only the streamer and brobot admins can switch commands on or off.</p>
             }
 
