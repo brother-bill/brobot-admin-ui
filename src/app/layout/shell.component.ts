@@ -7,20 +7,21 @@ import {
     inject,
     signal,
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import type { LibSkipLinkTarget } from '@singularity/ngx-ui';
 import { LibAlertBannerComponent, LibSkipLinkComponent } from '@singularity/ngx-ui';
-import { filter } from 'rxjs';
+import { filter, take } from 'rxjs';
 import type { AuthNotice } from '../core/auth-return';
-import { AUTH_RETURN_PARAMS, readAuthReturn } from '../core/auth-return';
-import { SessionService } from '../core/session.service';
+import { AUTH_RETURN_PARAMS, readAuthReturn, takeReturnUrl } from '../core/auth-return';
+import { injectSession } from '../core/session';
 import { SiteHeaderComponent } from './site-header.component';
 
 /**
  * The site's frame: skip link, header, the Twitch callback's notice, and the
- * page. Owns the session restore, so the stream overlay (which is outside
- * this frame) never asks who is signed in.
+ * page. Its route starts the session (`startSession` in `app.routes.ts`), so
+ * the stream overlay, which is outside this frame, never asks who is signed
+ * in; the frame sends a viewer back where they signed in from.
  */
 @Component({
     selector: 'app-shell',
@@ -77,7 +78,7 @@ import { SiteHeaderComponent } from './site-header.component';
 export class ShellComponent {
     private readonly router = inject(Router);
     private readonly injector = inject(Injector);
-    protected readonly session = inject(SessionService);
+    private readonly session = injectSession();
 
     protected readonly notice = signal<AuthNotice | null>(null);
     protected readonly skipLinks: LibSkipLinkTarget[] = [
@@ -99,15 +100,25 @@ export class ShellComponent {
                 if (previousPath !== null && path !== previousPath) this.focusPageHeading();
                 previousPath = path;
             });
-        void this.restoreSession();
+        this.returnAfterSignIn();
     }
 
-    private async restoreSession(): Promise<void> {
-        await this.session.restore();
-        const returnUrl = this.session.takeReturnUrl();
-        if (returnUrl && this.session.state() === 'signed-in') {
-            await this.router.navigateByUrl(returnUrl, { replaceUrl: true });
-        }
+    /**
+     * Once the first restore has an answer (an outage counts), takes the
+     * remembered page and goes back to it if that answer is signed in.
+     */
+    private returnAfterSignIn(): void {
+        toObservable(this.session.status, { injector: this.injector })
+            .pipe(
+                filter(status => status !== 'restoring'),
+                take(1),
+            )
+            .subscribe(status => {
+                const returnUrl = takeReturnUrl();
+                if (returnUrl && status === 'signed-in') {
+                    void this.router.navigateByUrl(returnUrl, { replaceUrl: true });
+                }
+            });
     }
 
     /** Shows what the Twitch callback reported, then takes its parameters off the URL. */

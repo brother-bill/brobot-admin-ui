@@ -8,7 +8,7 @@ import {
     LibSpinnerComponent,
 } from '@singularity/ngx-ui';
 import { BrobotApi } from '../core/brobot-api';
-import { SessionService } from '../core/session.service';
+import { injectSession } from '../core/session';
 
 /**
  * Signing in, and — for admins — linking the streamer's and the bot's Twitch
@@ -40,8 +40,8 @@ import { SessionService } from '../core/session.service';
         <div class="page">
             <h1 class="page__title">Account</h1>
 
-            @switch (session.state()) {
-                @case ('unknown') {
+            @switch (session.status()) {
+                @case ('restoring') {
                     <lib-spinner label="Checking whether you are signed in" />
                 }
                 @case ('signed-in') {
@@ -94,7 +94,7 @@ import { SessionService } from '../core/session.service';
                     <p class="page__lede">
                         Sign in with your Twitch account. brobot only asks Twitch for your profile.
                     </p>
-                    @if (session.state() === 'unreachable') {
+                    @if (session.status() === 'unreachable') {
                         <p class="muted">brobot isn't answering right now, so signing in may fail.</p>
                     }
                     <div class="row">
@@ -106,7 +106,7 @@ import { SessionService } from '../core/session.service';
     `,
 })
 export class LoginPage {
-    protected readonly session = inject(SessionService);
+    protected readonly session = injectSession();
     private readonly api = inject(BrobotApi);
 
     protected readonly loginUrl = this.api.flowUrl('login');

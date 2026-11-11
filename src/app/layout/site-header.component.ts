@@ -2,7 +2,8 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { LibBtnDirective, LibSpinnerComponent } from '@singularity/ngx-ui';
 import { BrobotApi } from '../core/brobot-api';
-import { SessionService } from '../core/session.service';
+import { rememberReturnUrl } from '../core/auth-return';
+import { injectSession } from '../core/session';
 
 interface NavItem {
     path: string;
@@ -104,8 +105,8 @@ interface NavItem {
             </nav>
 
             <div class="account">
-                @switch (session.state()) {
-                    @case ('unknown') {
+                @switch (session.status()) {
+                    @case ('restoring') {
                         <lib-spinner [diameter]="20" label="Checking whether you are signed in" />
                     }
                     @case ('signed-in') {
@@ -139,7 +140,7 @@ interface NavItem {
     `,
 })
 export class SiteHeaderComponent {
-    protected readonly session = inject(SessionService);
+    protected readonly session = injectSession();
     private readonly router = inject(Router);
     private readonly api = inject(BrobotApi);
 
@@ -153,11 +154,11 @@ export class SiteHeaderComponent {
     ];
 
     protected rememberPage(): void {
-        this.session.rememberReturnUrl(this.router.url);
+        rememberReturnUrl(this.router.url);
     }
 
-    protected async logout(): Promise<void> {
-        await this.session.logout();
-        await this.router.navigateByUrl('/commands');
+    /** Lands on `/commands` once the API has cleared the cookies (`brobotAuthConfig`'s `onLogout`). */
+    protected logout(): void {
+        this.session.store.logout();
     }
 }

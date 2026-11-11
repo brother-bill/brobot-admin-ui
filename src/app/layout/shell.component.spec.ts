@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import type { Routes } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { startSession } from '../core/session';
 import { API, appTestProviders, text, user } from '../testing/test-helpers';
 import { ShellComponent } from './shell.component';
 
@@ -19,6 +20,7 @@ const ROUTES: Routes = [
     {
         path: '',
         component: ShellComponent,
+        providers: [startSession()],
         children: [
             { path: 'commands', component: TestPageComponent },
             { path: 'pokemon/leaderboard', component: TestPageComponent },

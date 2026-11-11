@@ -2,6 +2,7 @@ import { inject } from '@angular/core';
 import type { Routes } from '@angular/router';
 import { Router } from '@angular/router';
 import { environment } from '../environments/environment';
+import { startSession } from './core/session';
 import { ShellComponent } from './layout/shell.component';
 import { OVERLAY_SOCKET, WebSocketOverlaySocket } from './overlay/overlay-socket';
 
@@ -35,6 +36,7 @@ export const routes: Routes = [
     {
         path: '',
         component: ShellComponent,
+        providers: [startSession()],
         children: [
             { path: '', pathMatch: 'full', redirectTo: toCommands },
             {
