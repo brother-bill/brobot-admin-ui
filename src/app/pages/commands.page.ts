@@ -11,7 +11,7 @@ import {
 import type { BotCommand, CommandCategory } from '../core/brobot-api';
 import { BrobotApi } from '../core/brobot-api';
 import { describeHttpError } from '../core/http-errors';
-import { SessionService } from '../core/session.service';
+import { injectSession } from '../core/session';
 
 const CATEGORY_TITLES: Record<CommandCategory, string> = {
     pokemon: 'Pokémon',
@@ -72,7 +72,7 @@ interface CommandGroup {
                     You are an admin: the switches below turn a command on or off for everyone, and
                     stay that way after brobot restarts.
                 </p>
-            } @else if (session.state() === 'signed-in') {
+            } @else if (session.status() === 'signed-in') {
                 <p class="muted">Only the streamer and brobot admins can switch commands on or off.</p>
             }
 
@@ -168,7 +168,7 @@ interface CommandGroup {
 })
 export class CommandsPage {
     private readonly api = inject(BrobotApi);
-    protected readonly session = inject(SessionService);
+    protected readonly session = injectSession();
 
     protected readonly commands = httpResource<BotCommand[]>(() => this.api.url('commands'));
 
@@ -217,9 +217,17 @@ export class CommandsPage {
             this.saveError.set(
                 `Could not turn ${command.trigger} ${enabled ? 'on' : 'off'}. ${describeHttpError(error)}`,
             );
-            // The session ended under us (the interceptor's refresh failed too):
-            // re-read it, so the header and these switches stop claiming otherwise.
-            if (error instanceof HttpErrorResponse && error.status === 401) void this.session.restore();
+            // The session ended under us. When the interceptor's refresh was
+            // refused the store has already signed out; if it still claims a
+            // session, re-read it, so the header and these switches stop
+            // claiming otherwise.
+            if (
+                error instanceof HttpErrorResponse &&
+                error.status === 401 &&
+                this.session.status() === 'signed-in'
+            ) {
+                this.session.store.restore();
+            }
         }
     }
 

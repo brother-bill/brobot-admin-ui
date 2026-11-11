@@ -1,9 +1,9 @@
 import { HttpTestingController } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { afterEach, describe, expect, it } from 'vitest';
+import { injectSessionStore } from '@singularity/ngx-auth';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { BotCommand, SessionUser } from '../core/brobot-api';
-import { SessionService } from '../core/session.service';
-import { API, appTestProviders, provideFakeSession, settle, text, user } from '../testing/test-helpers';
+import { API, appTestProviders, provideFakeSession, settle, startTestSession, text, user } from '../testing/test-helpers';
 import { CommandsPage } from './commands.page';
 
 const COMMANDS: BotCommand[] = [
@@ -38,14 +38,16 @@ describe('CommandsPage', () => {
 
     afterEach(() => http.verify());
 
-    let session: { restores: number };
+    let restore: ReturnType<typeof vi.fn>;
 
     async function render(signedInAs: SessionUser | null) {
         TestBed.configureTestingModule({
             providers: [...appTestProviders(), provideFakeSession(signedInAs)],
         });
         http = TestBed.inject(HttpTestingController);
-        session = TestBed.inject(SessionService) as unknown as { restores: number };
+        startTestSession();
+        const store = TestBed.runInInjectionContext(() => injectSessionStore<SessionUser>());
+        restore = vi.spyOn(store, 'restore') as unknown as ReturnType<typeof vi.fn>;
         const fixture = TestBed.createComponent(CommandsPage);
         TestBed.tick();
         http.expectOne(`${API}/commands`).flush(COMMANDS);
@@ -112,14 +114,27 @@ describe('CommandsPage', () => {
         await settle(fixture);
     });
 
-    it('re-reads the session when a save finds it has ended', async () => {
+    it('drops the switches when a save finds the session has ended', async () => {
         const { fixture, root } = await render(user({ roles: ['Admin'] }));
         root.querySelectorAll<HTMLInputElement>('input[role="switch"]').item(0).click();
-        // ngx-auth's interceptor tries one refresh before giving up.
+        // ngx-auth's interceptor tries one refresh; its refusal ends the session in the store.
         http.expectOne(`${API}/commands`).flush(null, { status: 401, statusText: 'Unauthorized' });
         http.expectOne(`${API}/auth/refresh`).flush(null, { status: 401, statusText: 'Unauthorized' });
         await settle(fixture);
-        expect(session.restores).toBe(1);
+        expect(restore).not.toHaveBeenCalled();
+        expect(root.querySelectorAll('input[role="switch"]')).toHaveLength(0);
+        expect(text(root)).toContain('Your session has ended.');
+    });
+
+    it('re-reads a session the store still believes in after a refused save', async () => {
+        const { fixture, root } = await render(user({ roles: ['Admin'] }));
+        root.querySelectorAll<HTMLInputElement>('input[role="switch"]').item(0).click();
+        // The refresh goes through, yet the retried save is refused again.
+        http.expectOne(`${API}/commands`).flush(null, { status: 401, statusText: 'Unauthorized' });
+        http.expectOne(`${API}/auth/refresh`).flush(null);
+        http.expectOne(`${API}/commands`).flush(null, { status: 401, statusText: 'Unauthorized' });
+        await settle(fixture);
+        expect(restore).toHaveBeenCalledTimes(1);
         expect(root.querySelectorAll('input[role="switch"]')).toHaveLength(0);
         expect(text(root)).toContain('Your session has ended.');
     });

@@ -40,3 +40,29 @@ export function readAuthReturn(params: ParamMap): AuthNotice | null {
     }
     return null;
 }
+
+const RETURN_URL_KEY = 'brobot.authReturnUrl';
+
+/**
+ * Remember where the viewer was before the Twitch round trip. The API's
+ * callback always lands on the site root; {@link takeReturnUrl} brings them
+ * back.
+ */
+export function rememberReturnUrl(url: string): void {
+    try {
+        sessionStorage.setItem(RETURN_URL_KEY, url);
+    } catch {
+        // Storage disabled: they land on the home page instead.
+    }
+}
+
+/** The remembered path, once. Only ever an in-app path: never an open redirect. */
+export function takeReturnUrl(): string | null {
+    try {
+        const url = sessionStorage.getItem(RETURN_URL_KEY);
+        sessionStorage.removeItem(RETURN_URL_KEY);
+        return url?.startsWith('/') && !url.startsWith('//') ? url : null;
+    } catch {
+        return null;
+    }
+}
