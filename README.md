@@ -130,9 +130,9 @@ pnpm run build                 # production build, budgets enforced
 pnpm run test:e2e              # Playwright smoke; the API is mocked with page.route
 ```
 
-### Why the initial bundle is ~700 kB
+### Why the initial bundle is ~580 kB
 
-The initial bundle is ~700 kB raw (~140 kB over the wire). The warning budget
+The initial bundle is ~580 kB raw (~145 kB over the wire). The warning budget
 is 750 kB. About 180 kB of that is the api-time contracts client. ngx-auth's
 `SessionStore` imports its `AuthService` from `@singularity/contracts/angular`
 for api-time's default endpoints, and that barrel is consumed as source, so no
