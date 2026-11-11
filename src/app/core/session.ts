@@ -5,7 +5,6 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import type { AuthConfig, SessionEndpoints, SessionStatus, SessionStore } from '@singularity/ngx-auth';
 import { SKIP_SESSION_REFRESH, injectSessionStore, provideSessionEndpoints } from '@singularity/ngx-auth';
-import { catchError, of } from 'rxjs';
 import type { SessionUser } from './brobot-api';
 import { BrobotApi, isAdmin } from './brobot-api';
 
@@ -34,8 +33,10 @@ export function brobotAuthConfig(apiBaseUrl: string): AuthConfig {
  * `HttpClient`, so the interceptor adds credentials and answers a 401 from the
  * status check with one refresh.
  *
- * A logout the API cannot be reached for still signs out here, as it always
- * has: the store only publishes signed out once its logout request succeeds.
+ * A failed logout is passed to the store as it is. The cookies are still set,
+ * so the store keeps the user signed in and sets `logoutState` to `failed`,
+ * and the header says so. Publishing signed out anyway would leave a live
+ * session behind a signed-out screen, and a reload would sign back in.
  */
 export function brobotSessionEndpoints(): SessionEndpoints<SessionUser> {
     const http = inject(HttpClient);
@@ -48,13 +49,7 @@ export function brobotSessionEndpoints(): SessionEndpoints<SessionUser> {
                 {},
                 { context: new HttpContext().set(SKIP_SESSION_REFRESH, true) },
             ),
-        logout: () =>
-            http.post(api.url('auth/twitch/logout'), {}).pipe(
-                catchError((error: unknown) => {
-                    console.warn('brobot logout request failed; clearing the local session anyway', error);
-                    return of(null);
-                }),
-            ),
+        logout: () => http.post(api.url('auth/twitch/logout'), {}),
     };
 }
 
@@ -75,7 +70,12 @@ export interface Session {
     readonly store: SessionStore<SessionUser>;
     /** `restoring`, `signed-in`, `signed-out`, or `unreachable` (an outage, retried). */
     readonly status: Signal<SessionStatus>;
-    /** Who is signed in. Null unless the status is `signed-in`. */
+    /**
+     * Who is signed in. Kept through an outage: while the status is
+     * `unreachable` this is the user published before it (null if the outage
+     * came before any answer), because an outage is not a sign-out and the
+     * cookies may well still be good. Null while `restoring` or `signed-out`.
+     */
     readonly user: Signal<SessionUser | null>;
     readonly isAdmin: Signal<boolean>;
 }
@@ -84,6 +84,9 @@ export interface Session {
 export function injectSession(): Session {
     const store = injectSessionStore<SessionUser>();
     const published = toSignal(store.currentUser$, { requireSync: true });
-    const user = computed(() => (store.status() === 'signed-in' ? published() : null));
+    const user = computed(() => {
+        const status = store.status();
+        return status === 'signed-in' || status === 'unreachable' ? published() : null;
+    });
     return { store, status: store.status, user, isAdmin: computed(() => isAdmin(user())) };
 }

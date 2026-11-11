@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { TranslatePipe } from '@ngx-translate/core';
 import { LibBtnDirective, LibSpinnerComponent } from '@singularity/ngx-ui';
 import { BrobotApi } from '../core/brobot-api';
 import { rememberReturnUrl } from '../core/auth-return';
@@ -14,7 +15,7 @@ interface NavItem {
 @Component({
     selector: 'app-site-header',
     changeDetection: ChangeDetectionStrategy.OnPush,
-    imports: [RouterLink, RouterLinkActive, LibBtnDirective, LibSpinnerComponent],
+    imports: [RouterLink, RouterLinkActive, LibBtnDirective, LibSpinnerComponent, TranslatePipe],
     styles: `
         :host {
             display: block;
@@ -68,8 +69,16 @@ interface NavItem {
         }
         .account {
             display: flex;
+            flex-wrap: wrap;
             align-items: center;
-            gap: 0.75rem;
+            gap: 0.5rem 0.75rem;
+        }
+        .logout-error {
+            flex: 1 1 16rem;
+            max-width: 28rem;
+            margin: 0;
+            color: var(--ui-error);
+            font: var(--ui-body-small);
         }
         .avatar {
             width: 32px;
@@ -105,35 +114,39 @@ interface NavItem {
             </nav>
 
             <div class="account">
-                @switch (session.status()) {
-                    @case ('restoring') {
-                        <lib-spinner [diameter]="20" label="Checking whether you are signed in" />
+                @if (session.status() === 'restoring') {
+                    <lib-spinner [diameter]="20" label="Checking whether you are signed in" />
+                } @else if (session.user(); as user) {
+                    <!-- Through an outage (unreachable) too: an outage is not a sign-out. -->
+                    @if (user.profileImageUrl) {
+                        <img class="avatar" [src]="user.profileImageUrl" alt="" />
                     }
-                    @case ('signed-in') {
-                        @if (session.user(); as user) {
-                            @if (user.profileImageUrl) {
-                                <img class="avatar" [src]="user.profileImageUrl" alt="" />
-                            }
-                            <span class="who">
-                                <span class="sr-only">Signed in as </span>{{ user.displayName }}
-                                @if (session.isAdmin()) {
-                                    <span class="role">Admin</span>
-                                }
-                            </span>
-                            <button libBtn="neutral" appearance="outlined" type="button" (click)="logout()">
-                                Log out
-                            </button>
+                    <span class="who">
+                        <span class="sr-only">Signed in as </span>{{ user.displayName }}
+                        @if (session.isAdmin()) {
+                            <span class="role">Admin</span>
                         }
+                    </span>
+                    <!-- aria-disabled, not disabled: a disabled button would drop keyboard focus. -->
+                    <button
+                        libBtn="neutral"
+                        appearance="outlined"
+                        type="button"
+                        [attr.aria-disabled]="signingOut() ? 'true' : null"
+                        (click)="logout()">
+                        Log out
+                    </button>
+                    @if (session.store.logoutState() === 'failed') {
+                        <p class="logout-error" role="alert">{{ 'session.logout_failed' | translate }}</p>
                     }
-                    @default {
-                        <a
-                            libBtn="primary"
-                            appearance="filled"
-                            [href]="loginUrl"
-                            (click)="rememberPage()">
-                            Sign in with Twitch
-                        </a>
-                    }
+                } @else {
+                    <a
+                        libBtn="primary"
+                        appearance="filled"
+                        [href]="loginUrl"
+                        (click)="rememberPage()">
+                        Sign in with Twitch
+                    </a>
                 }
             </div>
         </div>
@@ -157,8 +170,16 @@ export class SiteHeaderComponent {
         rememberReturnUrl(this.router.url);
     }
 
-    /** Lands on `/commands` once the API has cleared the cookies (`brobotAuthConfig`'s `onLogout`). */
+    protected readonly signingOut = computed(() => this.session.store.logoutState() === 'signing-out');
+
+    /**
+     * Lands on `/commands` once the API has cleared the cookies
+     * (`brobotAuthConfig`'s `onLogout`). A failed logout stays signed in, with
+     * the error beside this button; pressing it again retries. Ignored while
+     * a logout is already running.
+     */
     protected logout(): void {
+        if (this.signingOut()) return;
         this.session.store.logout();
     }
 }

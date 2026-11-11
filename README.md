@@ -54,9 +54,19 @@ brobot's `GET /api/auth/twitch/status`, `POST /api/auth/refresh` and
   fix means signed out. Anything else is `unreachable`: never signed out,
   retried by the store (5, 15, 30, then every 60 s), and `/login` says brobot
   isn't answering.
+- `injectSession().user` (and so `isAdmin`) keeps the signed-in user while
+  the status is `unreachable`: a keep-alive renewal that hits an outage
+  leaves the header, the account page and the admin switches as they were
+  until a retry answers. It is null while `restoring`, `signed-out`, or in an
+  outage that came before any answer.
 - A refused refresh signs out where the visitor is; it never navigates. A
-  logout lands on `/commands`, and signs out locally even if the API cannot
-  be reached.
+  logout lands on `/commands` once brobot has cleared the cookies. If the
+  logout request fails (brobot down, a 5xx), nothing pretends otherwise: the
+  cookies are still set, so the visitor stays signed in, nothing navigates,
+  and the header shows an alert (`role="alert"`, text in
+  `core/ui-strings.ts`) beside the Log out button, which retries. While a
+  logout is running the button is `aria-disabled`, not `disabled`, so
+  keyboard focus stays on it.
 - **Sign in** is a full-page link to `/api/auth/twitch/login`. Before
   leaving, the site stores the current path. The API's callback lands on `/`,
   and the site then returns the viewer to where they were.
@@ -72,7 +82,8 @@ ngx-ui labels a few controls with translation keys. For example, the alert
 banner's dismiss button is `a11y.dismiss_alert`. The site is English-only, so
 `core/ui-strings.ts` gives ngx-translate a small inline English table. Without
 it, a screen reader would read the key itself. Add a key there when a new
-ngx-ui component shows one.
+ngx-ui component shows one. The failed-logout alert's text is there too
+(`session.logout_failed`), read with ngx-translate's `translate` pipe.
 
 ## The stream overlay
 

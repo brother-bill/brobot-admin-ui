@@ -3,17 +3,22 @@ import { inject, makeEnvironmentProviders, provideAppInitializer } from '@angula
 import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 
 /**
- * The English for the few ngx-ui strings this site shows. ngx-ui labels some
- * controls with translation keys (the alert banner's dismiss button is
+ * The English for the few translation keys this site shows. ngx-ui labels
+ * some controls with keys (the alert banner's dismiss button is
  * `a11y.dismiss_alert`); with no ngx-translate the key itself would be the
- * button's accessible name. The site is English-only, so the table is inline
- * rather than a loaded file. Any other string passes through unchanged.
- * Wording matches tt-budget's `public/i18n/en.json`.
+ * button's accessible name. Those match tt-budget's `public/i18n/en.json`.
+ * The site's own keyed strings sit under `session`. The site is
+ * English-only, so the table is inline rather than a loaded file. Any other
+ * string passes through unchanged.
  */
 export const UI_STRINGS_EN = {
     a11y: {
         dismiss_alert: 'Dismiss alert',
         skip_links_region: 'Skip navigation',
+    },
+    session: {
+        logout_failed:
+            "Couldn't log you out: brobot isn't answering. You're still signed in on this browser; try again.",
     },
 };
 
