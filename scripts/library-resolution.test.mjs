@@ -100,7 +100,7 @@ test('Turbo orders the declared library builds and retains application output la
     assert.deepEqual(output, desktop ? { base: 'dist/renderer', browser: '' } : 'dist');
 });
 
-test('direct entry points reject stale compiled output before invoking builders or tests', () => {
+test('build and test reject stale compiled output before invoking builders or tests; typecheck reads source', () => {
     const fixture = mkdtempSync(resolve(tmpdir(), 'brobot-resolution-'));
     const write = (path, content) => {
         const file = resolve(fixture, path);
@@ -133,14 +133,23 @@ test('direct entry points reject stale compiled output before invoking builders 
         // Staleness is content, not timestamps: a changed compiler input
         // invalidates the receipt, so the existing output is stale.
         write('libs/ngx-ui/src/index.ts', 'export const value = 2;');
-        for (const operation of [...(desktop ? ['build', 'build:renderer'] : ['build']), 'typecheck', 'test']) {
+        // Run a script's guard (its first command) in the isolated workspace.
+        const guard = operation => spawnSync(pkg.scripts[operation].split(' && ')[0].replace('../../scripts/check-library-freshness.mjs',
+            `${shellQuote(resolve(root, 'scripts/check-library-freshness.mjs'))} --root ${shellQuote(fixture)}`),
+            { shell: true, cwd: resolve(fixture, consumer), encoding: 'utf8' });
+        // typecheck resolves every library from source (asserted above) and
+        // Turbo builds nothing before it (singularity's turbo.json: typecheck
+        // depends on transit), so its guard checks only contracts' generated
+        // sources: a stale dist/ it never reads must not fail it.
+        assert.equal(pkg.scripts.typecheck.split(' && ')[0], 'node ../../scripts/check-library-freshness.mjs --generated-only');
+        const typecheck = guard('typecheck');
+        assert.equal(typecheck.status, 0, typecheck.stdout + typecheck.stderr);
+        for (const operation of [...(desktop ? ['build', 'build:renderer'] : ['build']), 'test']) {
             const command = pkg.scripts[operation];
             assert.ok(command.startsWith(`node ../../scripts/check-library-freshness.mjs --consumer ${consumer} --tsconfig `));
-            // Run the real command in an isolated workspace; the stale guard
-            // must stop it before any compiler, unit runner or builder starts.
-            const probe = command.replace('../../scripts/check-library-freshness.mjs',
-                `${shellQuote(resolve(root, 'scripts/check-library-freshness.mjs'))} --root ${shellQuote(fixture)}`);
-            const result = spawnSync(probe, { shell: true, cwd: resolve(fixture, consumer), encoding: 'utf8' });
+            // The stale guard must stop it before any compiler, unit runner or
+            // builder starts.
+            const result = guard(operation);
             assert.equal(result.status, 1, result.stdout + result.stderr);
             assert.match(result.stderr, /^stale compiled output: dist\/libs\/ngx-ui$/m);
             assert.match(result.stderr, /^Recovery \(from repository root\): pnpm exec turbo run build --filter=@singularity\/ngx-ui$/m);
@@ -150,6 +159,8 @@ test('direct entry points reject stale compiled output before invoking builders 
             write('libs/contracts/package.json', { name: '@singularity/contracts' });
             const diagnostics = check();
             assert.ok(diagnostics.some(item => item.kind === 'generated' && item.command === 'pnpm run generate:contracts'));
+            // ...and typecheck still refuses missing generated contracts.
+            assert.equal(guard('typecheck').status, 1);
         }
     } finally {
         rmSync(fixture, { recursive: true, force: true });
