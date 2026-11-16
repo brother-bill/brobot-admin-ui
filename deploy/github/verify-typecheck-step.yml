@@ -6,9 +6,12 @@
 # so the operator pastes it in. Three projects: tsconfig.app.json is the site
 # (it excludes the specs), tsconfig.spec.json compiles the unit specs, and
 # e2e/tsconfig.json the Playwright smoke spec, which nothing else compiles.
+# First, the read-only check that src/app/core/generated is what brobot's
+# registered document (libs/contracts/documents.yaml) generates (no Java).
 
             - name: Typecheck brobot-admin-ui
               run: |
+                  node apps/brobot-admin-ui/scripts/check-brobot-api.mjs
                   pnpm exec tsc --noEmit -p apps/brobot-admin-ui/tsconfig.app.json
                   pnpm exec tsc --noEmit -p apps/brobot-admin-ui/tsconfig.spec.json
                   pnpm exec tsc --noEmit -p apps/brobot-admin-ui/e2e/tsconfig.json

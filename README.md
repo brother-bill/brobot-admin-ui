@@ -76,6 +76,40 @@ brobot's `GET /api/auth/twitch/status`, `POST /api/auth/refresh` and
 - **Streamer / bot links** are admin-only buttons on `/login`. They never
   change who is signed in here.
 
+## The API's types
+
+The shapes of brobot's HTTP API are not written here. They are generated from
+brobot's OpenAPI document, the one its entry in the superproject's contract
+registry (`libs/contracts/documents.yaml`, `name: brobot`) names, at the
+commit that entry records. The generator is openapi-generator
+`typescript-angular` at the version `openapitools.json` pins (7.18.0), models
+only, with no services. Its output is committed in `src/app/core/generated/`.
+`src/app/core/brobot-api.ts` re-exports those types under the names the pages
+use (`BotCommand`, `LeaderboardEntry`, `TeamResponse`, `TeamPokemon`,
+`BattleOutcome`, `SessionUser`, `ActiveGame`, `CommandCategory`). Reads still
+go through `httpResource` in the pages, and writes through `BrobotApi`.
+
+```bash
+pnpm run generate:api   # regenerate; needs Java 17+, and git (apps/brobot at the commit) or gh
+pnpm run check:api      # read-only freshness check; no Java
+```
+
+- **Never edit `generated/`.** `scripts/check-brobot-api.mjs` holds it to
+  `generated/.provenance.json`: the registry entry it was generated from, the
+  sha256 of the document, of `openapitools.json` and of the generation script
+  (which holds the generator's options), and of every file it wrote.
+  `typecheck`, `build` and `test` run it.
+- **When brobot changes its API**, it merges the change, then moves its
+  registry entry to the new commit. From then on this check fails until the
+  models are regenerated from that commit, so the registry bump in the
+  superproject comes with this submodule's regeneration and pointer bump.
+- **One correction is made by hand**, in `brobot-api.ts`:
+  `TeamResponse.pokemonTeam` is `| null` in the document
+  (`type: [object, null]`), but 7.18.0 drops the `null` when it lifts that
+  inline object into its own model.
+- The overlay's WebSocket frames are not part of the HTTP document; see
+  below.
+
 ## Strings from ngx-ui
 
 ngx-ui labels a few controls with translation keys. For example, the alert
@@ -133,6 +167,7 @@ and talks to `https://admin.brobot.live`.
 
 ```bash
 pnpm exec eslint .
+pnpm run check:api             # the generated API models match brobot's registered document
 pnpm exec tsc --noEmit -p tsconfig.app.json
 pnpm exec tsc --noEmit -p tsconfig.spec.json
 pnpm exec tsc --noEmit -p e2e/tsconfig.json
