@@ -8,7 +8,9 @@ export default createAngularConfig({
     a11yConfig,
     additionalRules: [
         {
-            ignores: ['dist/**', 'test-results/**', 'playwright-report/**'],
+            // src/app/core/generated is openapi-generator's output, held by
+            // scripts/check-brobot-api.mjs instead.
+            ignores: ['dist/**', 'test-results/**', 'playwright-report/**', 'src/app/core/generated/**'],
         },
     ],
 });

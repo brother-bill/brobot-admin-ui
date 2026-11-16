@@ -1,0 +1,54 @@
+{
+    "format": "brobot-api-models/v1",
+    "document": {
+        "name": "brobot",
+        "repository": "brother-bill/brobot",
+        "ref": "749659d47db54044b88d9120d922c15d7b9fb397",
+        "path": "openapi.json",
+        "sha256": "9dd16fa0989dcf484adbd5096e38e0095bfe0a03fc4c1bec00ba148e65698629"
+    },
+    "generator": {
+        "name": "typescript-angular",
+        "version": "7.18.0",
+        "globalProperties": "models,supportingFiles=models.ts",
+        "additionalProperties": "ngVersion=21.0.0,supportsES6=true,fileNaming=kebab-case,stringEnums=false"
+    },
+    "inputs": {
+        "openapitools.json": "c8511b19078b760065a8c0a0b7f42936fcfda58fa8d410b4b7e9b0a493da90df",
+        "scripts/generate-brobot-api.mjs": "39037418e947dd2b5baa6365710caa03d66e28d3b9675522f7421154bf3a362f"
+    },
+    "outputs": {
+        ".openapi-generator/FILES": "c28cac9f72897ccbb9793725d4a89eebfe5551ab42ce5f13704451cc82f20dc8",
+        ".openapi-generator/VERSION": "4221ce939a158a6a989b11dcc0820c432c67047a75d124c6761eeab760f2a6db",
+        "model/brobot-active-game.ts": "3c13b48d86326b3053c7ee246144ecaac34960d06dd32e666c474f1c144488a6",
+        "model/brobot-battle-outcome.ts": "1bf18d50fca03470a9b7dc7c1f20a3cf488b1d59ce7cdf53315fd371e07af4ed",
+        "model/brobot-command.ts": "7722771ee50081b5d290fb82d6db1ad4fd361cd5ea5002b891023561c2cefef4",
+        "model/brobot-current-user-status.ts": "452a3e5a2c6bae2227ee44edab13cf9c1bc2e1e0da3c2f889f95aea1de278350",
+        "model/brobot-depart-request.ts": "a3af0f3624d242ce869a90ab41a2dc1891437b6370dbbec4f6e82bb0719088a0",
+        "model/brobot-error.ts": "5f6e8732ae114387037ed2e3916c67ac1b4ded197f0277571ae15b3baee0114a",
+        "model/brobot-health-response-build.ts": "51636b5d8d69786a028cf5c4f7e1d79dd9a8d707f00103ae57664def49ba42fa",
+        "model/brobot-health-response.ts": "d60d50e1a68a74295319793a8c0b03ebedb9ffc1022834ff03ebffbb795466eb",
+        "model/brobot-horror-mode-response.ts": "b65d67942ea96abf77e363c4d09c39f5e278e6d23f7b3d5a489ed54c8ea8a5a5",
+        "model/brobot-horror-mode.ts": "6570facf3d960b683e45de570a0a87ce3a8aa8f7923fd492677b3b18545aae1b",
+        "model/brobot-leaderboard-entry-twitch-user.ts": "5eca7e2835e771600f8a644a187c7a5c767b5cf0ddb067ad7dc3cef0d82b20ae",
+        "model/brobot-leaderboard-entry.ts": "1e94b06a626134ee4139fc8d0f81addcfcca5be903214bd02cf3bbd478071d6e",
+        "model/brobot-linked-account.ts": "3e3a35b92c531bf6b992ca8917c3b1a63d873e74e7dac3f4ecfc6abcd7bf9278",
+        "model/brobot-liveness-response.ts": "d6bc976f19a8e8e0e77dc9dec072e274f093bb13b8dd352c67c72fbac9fdac98",
+        "model/brobot-refresh-request.ts": "d51355f63fc12d9fbaffd089fa7d8504d428c818cb448b58872c28460b6b9216",
+        "model/brobot-return-request-species.ts": "d1fbec5a3b79bce33e1a015261cae1bfb61cd113ad625fe269c3fca8b317e55b",
+        "model/brobot-return-request.ts": "abda7c0454421a48dc1b53c000c8326916be0bd09d200a1f53d274123a1cd5d3",
+        "model/brobot-set-command-enabled-request.ts": "c395b3951185302b8b7c423887738cc60cac29dbf66667e9ceff9848776f7d30",
+        "model/brobot-set-horror-mode-request.ts": "a781b50380b115ba00d3b8eb94ce2f6e0cd26ec708bf85e48a83be9e3af43de1",
+        "model/brobot-team-pokemon.ts": "3f4a8bf4c4297d76551f87cc173321892d6294e1872e360d8c7d3cb33f62f12b",
+        "model/brobot-team-response-pokemon-team.ts": "d946ba0c43778b0c5192a4216d0a58586911ede1215a6a9497bcdf125eb5d68d",
+        "model/brobot-team-response.ts": "6abd424dc41559486e550037ab9b42d4b0d294eed042ae8e76dce620417324e4",
+        "model/brobot-token-pair.ts": "4bbbceb84a1769dbab62757e1475e495148b237102c3ceebd166a4ee712ecefe",
+        "model/brobot-transfer-error.ts": "dff2e57c5dad0c22d6b635971dd158ee348e7bf7271d2f7471ca8adedeea9e95",
+        "model/brobot-transfer-pokemon-list.ts": "fc6be8b6da961a9766af906ab9a7ae8ef8b27b76566f102b24886302c7a63fa3",
+        "model/brobot-transfer-pokemon-response.ts": "c46cdfdd19704c855689f9d86d9fb71c764d17ae1459077bcd0da4ee758ee0f3",
+        "model/brobot-transfer-pokemon.ts": "657f0de390ae5f0bcae131a4c2ac1ccc09fec105b7ce2ce2a0e54b1ab02ebacc",
+        "model/brobot-validation-error-issues-inner.ts": "47588b0dfa6c49c3c07fcce8b4f13844a285bd3a74260b5227d6aab7b2fe1d90",
+        "model/brobot-validation-error.ts": "5a10ef6a545c8dc62a85dde3e429ef143c423cbb525b2e89b70a07901d822f61",
+        "model/models.ts": "14729157eb8e69bd932ed86eb182c71111711a86e0ed3e254e7e461ee6f2faa4"
+    }
+}
