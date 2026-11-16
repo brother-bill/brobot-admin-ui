@@ -2,24 +2,30 @@ import { HttpClient } from '@angular/common/http';
 import type { Provider } from '@angular/core';
 import { Injectable, InjectionToken, inject } from '@angular/core';
 import type { Observable } from 'rxjs';
+import type {
+    BrobotActiveGame,
+    BrobotBattleOutcome,
+    BrobotCommand,
+    BrobotCurrentUserStatus,
+    BrobotLeaderboardEntry,
+    BrobotTeamPokemon,
+    BrobotTeamResponse,
+    BrobotTeamResponsePokemonTeam,
+} from './generated/model/models';
 
 /**
- * brobot's HTTP surface, as `apps/brobot/README.md` ("HTTP surface (for the
- * admin site, U1)") documents it. These shapes mirror the API's; when one
- * changes there, change it here.
+ * brobot's HTTP surface. The shapes are generated from brobot's registered
+ * OpenAPI document (`brobot` in the superproject's
+ * `libs/contracts/documents.yaml`, at the commit it records) into
+ * `./generated/`; never edit those, regenerate them
+ * (`pnpm run generate:api`). These are the names the pages use.
  */
 
 /** Which game a Pokémon is in right now (migration plan §4). `pmd` = away in pmd-online. */
-export type ActiveGame = 'brobot' | 'pmd';
+export type ActiveGame = BrobotActiveGame;
 
 /** `GET /api/auth/twitch/status`. */
-export interface SessionUser {
-    oauthId: string;
-    displayName: string;
-    roles: string[];
-    profileImageUrl: string | null;
-    scope: string[];
-}
+export type SessionUser = BrobotCurrentUserStatus;
 
 /** Roles the API accepts on its admin endpoints (`StreamerAuth`, `Admin`). `BotAuth` is not one. */
 export const ADMIN_ROLES: readonly string[] = ['StreamerAuth', 'Admin'];
@@ -29,66 +35,31 @@ export function isAdmin(user: SessionUser | null): boolean {
 }
 
 /** One row of `GET /api/pokemon/leaderboard` (top 100 by level). */
-export interface LeaderboardEntry {
-    level: number;
-    name: string;
-    nameId: string;
-    shiny: boolean;
-    activeGame: ActiveGame;
-    twitchUser: { displayName: string };
-}
-
-export type PokemonGender = 'M' | 'F' | 'N';
+export type LeaderboardEntry = BrobotLeaderboardEntry;
 
 /**
  * A Pokémon on a team (`GET /api/pokemon/teams`). Carries no ids. `slot` is
  * null while the Pokémon is away in pmd-online (`activeGame: 'pmd'`).
  */
-export interface TeamPokemon {
-    name: string;
-    nameId: string;
-    slot: number | null;
-    level: number;
-    shiny: boolean;
-    wins: number;
-    losses: number;
-    draws: number;
-    item: string;
-    moves: string[];
-    dexNum: number;
-    color: string;
-    types: string[];
-    gender: PokemonGender | string;
-    nature: string;
-    ability: string;
-    activeGame: ActiveGame;
-    createdDate: string;
-    updatedDate: string;
-}
+export type TeamPokemon = BrobotTeamPokemon;
 
-/** `GET /api/pokemon/teams?login=`. `pokemonTeam` is null for a user who never made one. */
-export interface TeamResponse {
-    displayName: string;
-    pokemonTeam: { pokemon: TeamPokemon[] } | null;
-}
+/**
+ * `GET /api/pokemon/teams?login=`. `pokemonTeam` is null for a user who never
+ * made one. The document says so (`type: [object, null]`), but
+ * openapi-generator 7.18.0 drops the `null` when it lifts that inline object
+ * into `BrobotTeamResponsePokemonTeam`, so it is put back here.
+ */
+export type TeamResponse = Omit<BrobotTeamResponse, 'pokemonTeam'> & {
+    pokemonTeam: BrobotTeamResponsePokemonTeam | null;
+};
 
 /** `GET /api/pokemon/battle-outcome` and `/team-battle-outcome`. */
-export interface BattleOutcome {
-    outcome: string[];
-    updatedDate: string | null;
-}
+export type BattleOutcome = BrobotBattleOutcome;
 
-export type CommandCategory = 'pokemon' | 'voting' | 'fun' | 'ai';
+export type CommandCategory = BrobotCommand.CategoryEnum;
 
 /** One row of `GET /api/commands`. */
-export interface BotCommand {
-    name: string;
-    trigger: string;
-    aliases: string[];
-    category: CommandCategory;
-    description: string;
-    enabled: boolean;
-}
+export type BotCommand = BrobotCommand;
 
 /** The three Twitch OAuth flows. Each starts with a full-page navigation, never XHR. */
 export type TwitchFlow = 'login' | 'streamer' | 'bot';
