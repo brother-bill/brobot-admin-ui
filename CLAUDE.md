@@ -21,3 +21,7 @@ Definition of Done, WCAG 2.2 AA, and no Playwright in fleet jobs.
 - **Typecheck all three projects**: `tsconfig.app.json`, `tsconfig.spec.json`
   and `e2e/tsconfig.json`. `tsconfig.editor.json` exists only so eslint's
   type-aware rules can see every file.
+- **gitleaks scans every commit** ("Secret scanning" in `README.md`).
+  `scripts/gitleaks/` and `.githooks/pre-commit` are singularity's copies: do
+  not edit them here. Do not add to `.gitleaks.toml`'s allowlist without the
+  owner. A false positive gets `gitleaks:allow` on its line.
