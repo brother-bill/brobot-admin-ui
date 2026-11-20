@@ -186,3 +186,26 @@ generated service tree-shakes. Another ~80 kB is ngx-ui's icon sprite. Both
 costs come from the shared libs, and the fix belongs there: brobot replaces
 those default endpoints, but ngx-auth still imports the generated client to
 define them.
+
+## Secret scanning
+
+gitleaks runs here as it does in singularity; its
+`guidelines/workflow/secret-scanning.md` is the reference.
+`scripts/gitleaks/{pin.env,install.sh,scan.sh}` and `.githooks/pre-commit`
+are singularity's files, copied unchanged (`check-copies.mjs` there compares
+them). `postinstall` sets `core.hooksPath .githooks` outside GitHub Actions,
+so the pre-commit hook scans every commit. With no gitleaks, or not the
+pinned version, it prints a note and lets the commit through.
+
+```bash
+bash scripts/gitleaks/install.sh           # the pinned gitleaks, into ~/.local/bin
+pnpm run secrets:scan history              # every commit, minus the baseline
+pnpm run secrets:scan range origin/main..HEAD
+```
+
+`.gitleaks.toml` is the default rules plus one owner-approved path
+exclusion, `src/app/core/generated/.provenance.json`. Its content hashes
+match `generic-api-key`, and they were all 6 findings in the 2026-11-19 scan.
+`.gitleaks-baseline.json` is empty: once that file is excluded, `origin/main`
+has no findings (2026-11-20, gitleaks 8.30.1, `6458a49`). A false positive gets
+a `gitleaks:allow` comment on its line. Any other exclusion needs the owner.
