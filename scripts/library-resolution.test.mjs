@@ -34,12 +34,12 @@ importers:
 const configs = ['tsconfig.app.json', 'tsconfig.spec.json', 'tsconfig.editor.json',
     desktop ? 'tsconfig.electron.json' : 'e2e/tsconfig.json'];
 const expected = {
-    '@singularity/ngx-ui': 'libs/ngx-ui/src/index.ts',
+    '@singularity/ngx-ui': 'libs/kit/ngx-ui/src/index.ts',
     ...(desktop ? { '@brobot-client/shared': 'apps/brobot-client/shared/index.ts' } : {
         '@singularity/contracts': 'libs/contracts/src/index.ts',
         '@singularity/contracts/angular': 'libs/contracts/generated/angular/index.ts',
         '@singularity/contracts/analytics-events': 'libs/contracts/src/analytics-events.ts',
-        '@singularity/ngx-auth': 'libs/ngx-auth/src/index.ts',
+        '@singularity/ngx-auth': 'libs/kit/ngx-auth/src/index.ts',
     }),
 };
 function config(name) {
@@ -113,26 +113,26 @@ test('build and test reject stale compiled output before invoking builders or te
         write(`${consumer}/package.json`, pkg);
         for (const name of configs) {
             write(`${consumer}/${name}`, { compilerOptions: {
-                baseUrl: '../..', paths: { '@singularity/ngx-ui': ['libs/ngx-ui/src/index.ts'] },
+                baseUrl: '../..', paths: { '@singularity/ngx-ui': ['libs/kit/ngx-ui/src/index.ts'] },
             } });
         }
         // Build receipts record the toolchain pins alongside the library's inputs.
         write('package.json', { name: 'fixture', packageManager: 'pnpm@11.5.1' });
         write('.nvmrc', '22.15.0\n');
         write('pnpm-lock.yaml', LOCK);
-        write('libs/ngx-ui/package.json', { name: '@singularity/ngx-ui', scripts: { build: 'ng-packagr -p ng-package.json' },
+        write('libs/kit/ngx-ui/package.json', { name: '@singularity/ngx-ui', scripts: { build: 'ng-packagr -p ng-package.json' },
             exports: { '.': './src/index.ts' } });
-        write('libs/ngx-ui/ng-package.json', { dest: '../../dist/libs/ngx-ui', lib: { entryFile: 'src/index.ts' } });
-        write('libs/ngx-ui/src/index.ts', 'export const value = 1;');
+        write('libs/kit/ngx-ui/ng-package.json', { dest: '../../../dist/libs/kit/ngx-ui', lib: { entryFile: 'src/index.ts' } });
+        write('libs/kit/ngx-ui/src/index.ts', 'export const value = 1;');
         const check = () => checkFreshness({ root: fixture, consumer, tsconfig: 'tsconfig.app.json' });
         assert.deepEqual(check(), [], 'source consumption needs no compiled output');
-        write('dist/libs/ngx-ui/fesm2022/singularity-ngx-ui.mjs', 'export const value = 1;');
-        write('dist/libs/ngx-ui/package.json', { exports: { '.': './fesm2022/singularity-ngx-ui.mjs' } });
+        write('dist/libs/kit/ngx-ui/fesm2022/singularity-ngx-ui.mjs', 'export const value = 1;');
+        write('dist/libs/kit/ngx-ui/package.json', { exports: { '.': './fesm2022/singularity-ngx-ui.mjs' } });
         sealReceipts({ root: fixture, package: '@singularity/ngx-ui' });
         assert.deepEqual(check(), [], 'sealed output matching its sources is fresh');
         // Staleness is content, not timestamps: a changed compiler input
         // invalidates the receipt, so the existing output is stale.
-        write('libs/ngx-ui/src/index.ts', 'export const value = 2;');
+        write('libs/kit/ngx-ui/src/index.ts', 'export const value = 2;');
         // Run a script's guard (its first command) in the isolated workspace.
         const guard = operation => spawnSync(pkg.scripts[operation].split(' && ')[0].replace('../../scripts/check-library-freshness.mjs',
             `${shellQuote(resolve(root, 'scripts/check-library-freshness.mjs'))} --root ${shellQuote(fixture)}`),
@@ -151,7 +151,7 @@ test('build and test reject stale compiled output before invoking builders or te
             // builder starts.
             const result = guard(operation);
             assert.equal(result.status, 1, result.stdout + result.stderr);
-            assert.match(result.stderr, /^stale compiled output: dist\/libs\/ngx-ui$/m);
+            assert.match(result.stderr, /^stale compiled output: dist\/libs\/kit\/ngx-ui$/m);
             assert.match(result.stderr, /^Recovery \(from repository root\): pnpm exec turbo run build --filter=@singularity\/ngx-ui$/m);
         }
         if (!desktop) {

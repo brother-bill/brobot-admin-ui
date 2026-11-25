@@ -6,7 +6,7 @@ last battles, and the stream overlay OBS shows on stream.
 
 This is the 2026 rebuild of the 2022 Angular 15 + Material site, done in
 place: Angular 21, zoneless, standalone components and signals, on the
-monorepo's `libs/ngx-ui` (material look, dark) with brobot's palette. It
+monorepo's `libs/kit/ngx-ui` (material look, dark) with brobot's palette. It
 lives in the singularity monorepo as `apps/brobot-admin-ui` (package
 `@singularity/brobot-admin-ui`). The migration charter is
 `guidelines/brobot/migration-plan.md` in the superproject; this is ticket
@@ -38,7 +38,7 @@ site only decides what to show.
 ## Auth
 
 brobot's session is a JWT pair in `httpOnly` cookies, the same shape
-api-time issues, so **libs/ngx-auth** is used unchanged: its `authInterceptor`
+api-time issues, so **libs/kit/ngx-auth** is used unchanged: its `authInterceptor`
 sends credentials to brobot's `/api` and answers a 401 with one refresh, and
 its `SessionStore` owns who is signed in. `provideBrobotSession()`
 (`core/session.ts`) points the store, and so the interceptor's refresh, at
