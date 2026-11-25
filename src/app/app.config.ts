@@ -11,7 +11,7 @@ import { brobotAuthConfig, provideBrobotSession } from './core/session';
 import { provideUiStrings } from './core/ui-strings';
 
 /**
- * brobot issues the same JWT cookie pair api-time does, so libs/ngx-auth's
+ * brobot issues the same JWT cookie pair api-time does, so libs/kit/ngx-auth's
  * interceptor and `SessionStore` work unchanged: the interceptor sends
  * credentials to brobot's `/api` and answers a 401 with one refresh, and
  * `provideBrobotSession()` points the store (and so that refresh) at

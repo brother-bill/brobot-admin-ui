@@ -14,7 +14,7 @@
         "typecheck": "node ../../scripts/check-library-freshness.mjs --generated-only && node scripts/check-brobot-api.mjs && tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.spec.json && tsc --noEmit -p tsconfig.editor.json && tsc --noEmit -p e2e/tsconfig.json",
         "generate:api": "node scripts/generate-brobot-api.mjs",
         "check:api": "node scripts/check-brobot-api.mjs",
-        "gen:theme": "node ../../libs/ngx-ui/scripts/generate-theme.mjs --config src/brand.config.json --out src/generated-colors.scss",
+        "gen:theme": "node ../../libs/kit/ngx-ui/scripts/generate-theme.mjs --config src/brand.config.json --out src/generated-colors.scss",
         "secrets:scan": "bash scripts/gitleaks/scan.sh",
         "postinstall": "if [ -z \"$GITHUB_ACTIONS\" ] && git rev-parse --is-inside-work-tree >/dev/null 2>&1 && [ -z \"$(git rev-parse --show-prefix)\" ]; then git config core.hooksPath .githooks || true; fi"
     },
