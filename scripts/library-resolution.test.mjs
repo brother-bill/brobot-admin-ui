@@ -122,7 +122,7 @@ test('build and test reject stale compiled output before invoking builders or te
         write('pnpm-lock.yaml', LOCK);
         write('libs/kit/ngx-ui/package.json', { name: '@singularity/ngx-ui', scripts: { build: 'ng-packagr -p ng-package.json' },
             exports: { '.': './src/index.ts' } });
-        write('libs/kit/ngx-ui/ng-package.json', { dest: '../../dist/libs/kit/ngx-ui', lib: { entryFile: 'src/index.ts' } });
+        write('libs/kit/ngx-ui/ng-package.json', { dest: '../../../dist/libs/kit/ngx-ui', lib: { entryFile: 'src/index.ts' } });
         write('libs/kit/ngx-ui/src/index.ts', 'export const value = 1;');
         const check = () => checkFreshness({ root: fixture, consumer, tsconfig: 'tsconfig.app.json' });
         assert.deepEqual(check(), [], 'source consumption needs no compiled output');
@@ -151,7 +151,7 @@ test('build and test reject stale compiled output before invoking builders or te
             // builder starts.
             const result = guard(operation);
             assert.equal(result.status, 1, result.stdout + result.stderr);
-            assert.match(result.stderr, /^stale compiled output: dist\/libs\/ngx-ui$/m);
+            assert.match(result.stderr, /^stale compiled output: dist\/libs\/kit\/ngx-ui$/m);
             assert.match(result.stderr, /^Recovery \(from repository root\): pnpm exec turbo run build --filter=@singularity\/ngx-ui$/m);
         }
         if (!desktop) {
